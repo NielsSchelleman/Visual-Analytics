@@ -33,29 +33,30 @@ def getRanges():
             "PercentTradesWBalance": range(0, 100)}
 
 def rangeSearchChecklist():
-    return {"ExternalRiskEstimate":" ",
-            "MSinceOldestTradeOpen":" ",
-            "MSinceMostRecentTradeOpen":" ",
-            "AverageMInFile":" ",
-            "NumSatisfactoryTrades":" ",
-            "NumTrades60Ever/DerogPubRec":" ",
-            "NumTrades90Ever/DerogPubRec":" ",
-            "PercentTradesNeverDelq":" ",
-            "MSinceMostRecentDelq":" ",
-            "MaxDelq/PublicRecLast12M":" ",
-            "MaxDelqEver":" ",
-            "NumTotalTrades":" ",
-            "NumTradesOpeninLast12M":" ",
-            "PercentInstallTrades":" ",
-            "MSinceMostRecentInqexcl7days":" ",
-            "NumInqLast6M":" ",
-            "NumInqLast6Mexcl7days":" ",
-            "NetFractionRevolvingBurden":" ",
-            "NetFractionInstallBurden":" ",
-            "NumRevolvingTradesWBalance":" ",
-            "NumInstallTradesWBalance":" ",
-            "NumBank/NatlTradesWHighUtilization":" ",
-            "PercentTradesWBalance":" "}
+    return ["ExternalRiskEstimate",
+            "MSinceOldestTradeOpen",
+            "MSinceMostRecentTradeOpen",
+            "AverageMInFile",
+            "NumSatisfactoryTrades",
+            "NumTrades60Ever/DerogPubRec",
+            "NumTrades90Ever/DerogPubRec",
+            "PercentTradesNeverDelq",
+            "MSinceMostRecentDelq",
+            "MaxDelq/PublicRecLast12M",
+            "MaxDelqEver",
+            "NumTotalTrades",
+            "NumTradesOpeninLast12M",
+            "PercentInstallTrades",
+            "MSinceMostRecentInqexcl7days",
+            "NumInqLast6M",
+            "NumInqLast6Mexcl7days",
+            "NetFractionRevolvingBurden",
+            "NetFractionInstallBurden",
+            "NumRevolvingTradesWBalance",
+            "NumInstallTradesWBalance",
+            "NumBank/NatlTradesWHighUtilization",
+            "PercentTradesWBalance"]
+
 
 
 def create_grid(current, ranges, checklist):
@@ -116,10 +117,8 @@ if __name__ == '__main__':
                 dcc.Checklist(options=rangeSearchChecklist(),
                               id='rangeSearchChecklist',
                               labelStyle={'display': 'block', 'padding-top': '2px'})],
-                style={'width': '20px', 'display': 'inline-block'}),
+                style={'width': '300px', 'display': 'inline-block'}),
 
-        html.Div([j for i in column_names for j in [i, html.Br(style=margedict)]],
-                 style={'width': '270px', 'display': 'inline-block'}),
         html.Div([j for i in variable_values_ids for j in [dcc.Input(id=i, value=-9, type='number'), html.Br()]],
                  style={'width': '160px', 'display': 'inline-block'}),
         html.Div([j for i in percentage_ids for j in [dcc.Input(id=i, value=10, type='number', style={'display': 'none'}
@@ -135,6 +134,7 @@ if __name__ == '__main__':
         html.Div(id='heatmaps')
 
     ])
+
 
 
 
