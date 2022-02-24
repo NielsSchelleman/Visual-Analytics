@@ -57,6 +57,36 @@ def rangeSearchChecklist():
             "PercentTradesWBalance"]
 
 
+def create_grid(current, ranges, checklist):
+    gridbase = []
+    counts = []
+    for nr, (val, name, valrange) in enumerate(zip(current[0], ranges.keys(), ranges.values())):
+        if name in checklist:
+            counts.append(nr)
+            gridbase.append(valrange)
+        else:
+            gridbase.append(val)
+    grid = np.array(np.meshgrid(*gridbase, indexing='ij'))
+    return pd.DataFrame(grid.reshape(grid.shape[0], -1).T), counts
+
+
+def plot_heatmaps(counts, data, ranges):
+    axes = list(combinations(counts, 2))
+    heatmaps = []
+    for combo in axes:
+        tempdata = data[[combo[0], combo[1], 'num_outcome']]
+        heatmapdata = tempdata.groupby(list(combo)).mean().unstack()
+        fig = go.Figure(layout=dict(xaxis_title=f'{list(ranges.keys())[combo[1]]}',
+                                    yaxis_title=f'{list(ranges.keys())[combo[0]]}',
+                                    title='fraction of Good values'),
+                        data=go.Heatmap(
+                            z=heatmapdata.values,
+                            x=list(zip(*heatmapdata.columns))[1],
+                            y=list(heatmapdata.index),
+                            hoverongaps=False))
+        heatmaps.append(dcc.Graph(figure=fig))
+    return heatmaps
+
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
 
@@ -196,18 +226,9 @@ if __name__ == '__main__':
 
             # create a grid with all the data for a gridsearch
             ranges = getRanges()
-            gridbase = []
-            counts = []
-            for nr, (val, name, valrange) in enumerate(zip(current[0], ranges.keys(), ranges.values())):
-                if name in checklist:
-                    counts.append(nr)
-                    gridbase.append(valrange)
-                else:
-                    gridbase.append(val)
-            grid = np.array(np.meshgrid(*gridbase, indexing='ij'))
+            newdata, counts = create_grid(current, ranges, checklist)
 
             # format the grid so that we can feed it to the model
-            newdata = pd.DataFrame(grid.reshape(grid.shape[0], -1).T)
             outcomes = model.predict(newdata)
 
             # reformat for plotting into heatmaps
@@ -217,21 +238,7 @@ if __name__ == '__main__':
             newdata['num_outcome'] = newdata.outcome.cat.codes
 
             # find all axes for the plot
-            axes = list(combinations(counts, 2))
-            heatmaps = []
-            for combo in axes:
-                tempdata = newdata[[combo[0],combo[1],'num_outcome']]
-                heatmapdata = tempdata.groupby(list(combo)).mean().unstack()
-                fig = go.Figure(layout=dict(xaxis_title=f'{list(ranges.keys())[combo[1]]}',
-                                            yaxis_title=f'{list(ranges.keys())[combo[0]]}',
-                                            title='fraction of Good values'),
-                                data=go.Heatmap(
-                                    z=heatmapdata.values,
-                                    x=list(zip(*heatmapdata.columns))[1],
-                                    y=list(heatmapdata.index),
-                                    hoverongaps=False))
-                heatmaps.append(dcc.Graph(figure=fig))
-
+            heatmaps = plot_heatmaps(counts, newdata, ranges)
             return f'Output: {prediction}', 0, html.Div(heatmaps)
 
     app.run_server(debug=True)
