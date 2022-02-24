@@ -1,9 +1,10 @@
 import pandas as pd
-from Model import buildModel
 from dash import Dash, html, dcc, Input, Output, exceptions
 import numpy as np
 from itertools import combinations
 import plotly.graph_objects as go
+import pickle
+
 
 def getRanges():
     # acceptable search spaces, assume you cannot go from some value to any special value eg. 26 --> -9
@@ -94,7 +95,7 @@ if __name__ == '__main__':
     # the columns that stores the labels
     labelDimension = "RiskPerformance"
     # build a random forest classifier
-    model = buildModel(features, labelDimension)
+    model = pickle.load(open('rf_mod.sav', 'rb'))
     app = Dash(__name__)
 
     app.layout = html.Div([
