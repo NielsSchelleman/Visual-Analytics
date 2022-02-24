@@ -33,29 +33,29 @@ def getRanges():
             "PercentTradesWBalance": range(0, 100)}
 
 def rangeSearchChecklist():
-    return ["ExternalRiskEstimate",
-            "MSinceOldestTradeOpen",
-            "MSinceMostRecentTradeOpen",
-            "AverageMInFile",
-            "NumSatisfactoryTrades",
-            "NumTrades60Ever/DerogPubRec",
-            "NumTrades90Ever/DerogPubRec",
-            "PercentTradesNeverDelq",
-            "MSinceMostRecentDelq",
-            "MaxDelq/PublicRecLast12M",
-            "MaxDelqEver",
-            "NumTotalTrades",
-            "NumTradesOpeninLast12M",
-            "PercentInstallTrades",
-            "MSinceMostRecentInqexcl7days",
-            "NumInqLast6M",
-            "NumInqLast6Mexcl7days",
-            "NetFractionRevolvingBurden",
-            "NetFractionInstallBurden",
-            "NumRevolvingTradesWBalance",
-            "NumInstallTradesWBalance",
-            "NumBank/NatlTradesWHighUtilization",
-            "PercentTradesWBalance"]
+    return {"ExternalRiskEstimate":" ",
+            "MSinceOldestTradeOpen":" ",
+            "MSinceMostRecentTradeOpen":" ",
+            "AverageMInFile":" ",
+            "NumSatisfactoryTrades":" ",
+            "NumTrades60Ever/DerogPubRec":" ",
+            "NumTrades90Ever/DerogPubRec":" ",
+            "PercentTradesNeverDelq":" ",
+            "MSinceMostRecentDelq":" ",
+            "MaxDelq/PublicRecLast12M":" ",
+            "MaxDelqEver":" ",
+            "NumTotalTrades":" ",
+            "NumTradesOpeninLast12M":" ",
+            "PercentInstallTrades":" ",
+            "MSinceMostRecentInqexcl7days":" ",
+            "NumInqLast6M":" ",
+            "NumInqLast6Mexcl7days":" ",
+            "NetFractionRevolvingBurden":" ",
+            "NetFractionInstallBurden":" ",
+            "NumRevolvingTradesWBalance":" ",
+            "NumInstallTradesWBalance":" ",
+            "NumBank/NatlTradesWHighUtilization":" ",
+            "PercentTradesWBalance":" "}
 
 
 def create_grid(current, ranges, checklist):
@@ -96,90 +96,47 @@ if __name__ == '__main__':
     labelDimension = "RiskPerformance"
     # build a random forest classifier
     model = pickle.load(open('rf_mod.sav', 'rb'))
+    margedict = {'margin-top': '3px'}
+    # Non label columns
+    column_names = list(features.columns)
+    column_names.remove(labelDimension)
+    # id lists
+    variable_values_ids = ['EXRE', 'MOTO', 'MRTO', 'AMIF', 'NSAT', 'T60D', 'T90D', 'PTND', 'MMRD', 'D12M', 'MADE',
+                           'NUTT', 'TO12',
+                           'PEIT', 'MRI7', 'NIL6', 'I6E7', 'NFRB', 'NFIB', 'RTWB', 'ITWB', 'TWHU', 'PTWB']
+    percentage_ids = list(column_names)
+
     app = Dash(__name__)
 
     app.layout = html.Div([
+        html.Div(["Fill in between 2-5 items to check the range, all original values and % of total range to check"]),
+
+
         html.Div([
-            "ExternalRiskEstimate: ",
-            dcc.Input(id='EXRE', value=-9, type='number'),
-            html.Br(),
-            "MSinceOldestTradeOpen: ",
-            dcc.Input(id='MOTO',  value=-9, type='number'),
-            html.Br(),
-            "MSinceMostRecentTradeOpen: ",
-            dcc.Input(id='MRTO',  value=-9, type='number'),
-            html.Br(),
-            "AverageMInFile: ",
-            dcc.Input(id='AMIF', value=-9, type='number'),
-            html.Br(),
-            "NumSatisfactoryTrades: ",
-            dcc.Input(id='NSAT',  value=-9, type='number'),
-            html.Br(),
-            "NumTrades60Ever/DerogPubRec",
-            dcc.Input(id='T60D',  value=-9, type='number'),
-            html.Br(),
-            "NumTrades90Ever/DerogPubRec",
-            dcc.Input(id='T90D', value=-9, type='number'),
-            html.Br(),
-            "PercentTradesNeverDelq",
-            dcc.Input(id='PTND', value=-9, type='number'),
-            html.Br(),
-            "MSinceMostRecentDelq",
-            dcc.Input(id='MMRD', value=-9, type='number'),
-            html.Br(),
-            "MaxDelq/PublicRecLast12M",
-            dcc.Input(id='D12M', value=-9, type='number'),
-            html.Br(),
-            "MaxDelqEver",
-            dcc.Input(id='MADE', value=-9, type='number'),
-            html.Br(),
-            "NumTotalTrades",
-            dcc.Input(id='NUTT', value=-9, type='number'),
-            html.Br(),
-            "NumTradesOpeninLast12M",
-            dcc.Input(id='TO12', value=-9, type='number'),
-            html.Br(),
-            "PercentInstallTrades",
-            dcc.Input(id='PEIT', value=-9, type='number'),
-            html.Br(),
-            "MSinceMostRecentInqexcl7days",
-            dcc.Input(id='MRI7', value=-9, type='number'),
-            html.Br(),
-            "NumInqLast6M",
-            dcc.Input(id='NIL6', value=-9, type='number'),
-            html.Br(),
-            "NumInqLast6Mexcl7days",
-            dcc.Input(id='I6E7', value=-9, type='number'),
-            html.Br(),
-            "NetFractionRevolvingBurden",
-            dcc.Input(id='NFRB', value=-9, type='number'),
-            html.Br(),
-            "NetFractionInstallBurden",
-            dcc.Input(id='NFIB', value=-9, type='number'),
-            html.Br(),
-            "NumRevolvingTradesWBalance",
-            dcc.Input(id='RTWB', value=-9, type='number'),
-            html.Br(),
-            "NumInstallTradesWBalance",
-            dcc.Input(id='ITWB', value=-9, type='number'),
-            html.Br(),
-            "NumBank/NatlTradesWHighUtilization",
-            dcc.Input(id='TWHU', value=-9, type='number'),
-            html.Br(),
-            "PercentTradesWBalance",
-            dcc.Input(id='PTWB', value=-9, type='number'),
-            html.Br()
-        ]),
-        html.Br(),
+                dcc.Checklist(options=rangeSearchChecklist(),
+                              id='rangeSearchChecklist',
+                              labelStyle={'display': 'block', 'padding-top': '2px'})],
+                style={'width': '20px', 'display': 'inline-block'}),
+
+        html.Div([j for i in column_names for j in [i, html.Br(style=margedict)]],
+                 style={'width': '270px', 'display': 'inline-block'}),
+        html.Div([j for i in variable_values_ids for j in [dcc.Input(id=i, value=-9, type='number'), html.Br()]],
+                 style={'width': '160px', 'display': 'inline-block'}),
+        html.Div([j for i in percentage_ids for j in [dcc.Input(id=i, value=10, type='number', style={'display': 'none'}
+                                                                ), html.Br()]],
+                 style={'width': '160px', 'display': 'inline-block'}
+                 ),
+
+
         html.Div(id='current_eval'),
-
-
         html.H6("Which values should be modified? ( between 2 and 5)"),
-        dcc.Checklist(options = rangeSearchChecklist(), id='rangeSearchChecklist', labelStyle = dict(display='block')),
+
         html.Button('Run Search', id='button_counterexample_run', n_clicks=0),
         html.Div(id='heatmaps')
 
     ])
+
+
 
     @app.callback(
         Output(component_id='current_eval', component_property='children'),
