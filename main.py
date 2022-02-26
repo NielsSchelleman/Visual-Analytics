@@ -80,11 +80,14 @@ def plot_heatmaps(counts, data, ranges):
         heatmapdata = tempdata.groupby(list(combo)).mean().unstack()
         fig = go.Figure(layout=dict(xaxis_title=f'{list(ranges.keys())[combo[1]]}',
                                     yaxis_title=f'{list(ranges.keys())[combo[0]]}',
+
                                     title='fraction of Good values'),
                         data=go.Heatmap(
                             z=heatmapdata.values,
                             x=list(zip(*heatmapdata.columns))[1],
                             y=list(heatmapdata.index),
+                            zmax=1,
+                            zmin=0,
                             hoverongaps=False))
         heatmaps.append(dcc.Graph(figure=fig))
     return heatmaps
@@ -116,27 +119,50 @@ if __name__ == '__main__':
         html.Div([
                 dcc.Checklist(options=rangeSearchChecklist(),
                               id='rangeSearchChecklist',
-                              labelStyle={'display': 'block', 'padding-top': '2px'})],
-                style={'width': '300px', 'display': 'inline-block'}),
+                              labelStyle={'display': 'block', 'height': '22px', 'width': '300px'})],
+                 style={'width': '300px', 'display': 'inline-block'}),
 
-        html.Div([j for i in variable_values_ids for j in [dcc.Input(id=i, value=-9, type='number'), html.Br()]],
+        html.Div([j for i in variable_values_ids for j in [html.Div([dcc.Input(id=i, value=-9, type='number',
+                                                                     style={'height': '15.9px',
+                                                                            'width': '140px'})],
+                                                                    style={'height': '22px',
+                                                                           'width': '150px'})]],
                  style={'width': '160px', 'display': 'inline-block'}),
-        html.Div([j for i in percentage_ids for j in [dcc.Input(id=i, value=10, type='number', style={'display': 'none'}
-                                                                ), html.Br()]],
-                 style={'width': '160px', 'display': 'inline-block'}
-                 ),
 
 
+
+        html.Div(id='percentages',style={'width': '160px', 'display': 'inline-block'}),
         html.Div(id='current_eval'),
         html.H6("Which values should be modified? ( between 2 and 5)"),
 
+
         html.Button('Run Search', id='button_counterexample_run', n_clicks=0),
-        html.Div(id='heatmaps')
+        html.Div(id='heatmaps'),
+
 
     ])
 
-
-
+    @app.callback(
+        Output('percentages','children'),
+        Input('rangeSearchChecklist', 'value'),
+    )
+    def GenInputs(checklist):
+        if not checklist:
+            checklist = []
+        children = []
+        for i in rangeSearchChecklist():
+            if i in checklist:
+                children.append(html.Div([
+                    dcc.Input(id=i+'_%', value=10, type='number',
+                              style={'display': 'block', 'height': '15.9px', 'width': '140px',
+                                     'padding-left': '2px'})],
+                    style={'height': '22px', 'width': '150px'}
+                ))
+            else:
+                children.append(html.Div([dcc.Input(id=i+'_%', value=0, type='number', style={'display': 'None'}),
+                                          html.Br()], style={'height': '22px',
+                                                             'width': '150px'}))
+        return children
 
     @app.callback(
         Output(component_id='current_eval', component_property='children'),
