@@ -6,9 +6,18 @@ import plotly.graph_objects as go
 import pickle
 
 
-def getRanges():
+
+def getRanges(percentages, current_vals):
+    #Indices of chosen variables
+    non_zero_idx = np.nonzero(np.array(percentages))
+
+    #Keep only variables which ranges we want to change
+    variable_list = np.array(rangeSearchChecklist())[non_zero_idx]
+    current_vals = np.array(current_vals).flatten()[non_zero_idx]
+    percentages = np.array(percentages)[non_zero_idx]
+
     # acceptable search spaces, assume you cannot go from some value to any special value eg. 26 --> -9
-    return {"ExternalRiskEstimate": range(30, 100),
+    ranges = {"ExternalRiskEstimate": range(30, 100),
             "MSinceOldestTradeOpen": range(0,1000,10),
             "MSinceMostRecentTradeOpen": range(0, 400,4),
             "AverageMInFile": range(0, 400,4),
@@ -31,6 +40,16 @@ def getRanges():
             "NumInstallTradesWBalance": range(1, 25),
             "NumBank/NatlTradesWHighUtilization": range(0, 25),
             "PercentTradesWBalance": range(0, 100)}
+    #Update ranges for selected variables
+    for variable, value, percentage in zip(variable_list, current_vals, percentages):
+        #Only viable for valid observations
+        if value > 0:
+            #For now using initial ranges
+            stepsize = np.round((ranges[variable][-1] - ranges[variable][0]) / len(ranges[variable]))
+            min = np.floor((1-(percentage/100))*value)
+            max = np.ceil((1+(percentage/100))*value)
+            ranges[variable] = range(int(min), int(max), int(stepsize))
+    return ranges
 
 def rangeSearchChecklist():
     return ["ExternalRiskEstimate",
@@ -192,12 +211,15 @@ if __name__ == '__main__':
         Input('TWHU', 'value'),
         Input('PTWB', 'value'),
         Input(component_id="button_counterexample_run",component_property='n_clicks'),
-        Input('rangeSearchChecklist', 'value')
+        Input('rangeSearchChecklist', 'value'),
+        Input('percentages', 'children')
     )
     def counterExampleSearch(EXRE, MOTO, MRTO, AMIF, NSAT, T60D, T90D, PTND, MMRD, D12M, MADE, NUTT, TO12, PEIT, MRI7,
                              NIL6, I6E7, NFRB, NFIB, RTWB, ITWB, TWHU, PTWB,
                              button,
-                             checklist):
+                             checklist,
+                             children
+                             ):
         if button == 0:
             raise exceptions.PreventUpdate
 
@@ -208,8 +230,13 @@ if __name__ == '__main__':
             if len(checklist)>5 or len(checklist)<2:
                 return f'Output: {prediction}', 0, 0
 
+            #Get all percentage ranges
+            percentages = []
+            for i in range(len(children)):
+                    percentages.append(children[i]['props']['children'][0]['props']['value'])
+
             # create a grid with all the data for a gridsearch
-            ranges = getRanges()
+            ranges = getRanges(percentages, current)
             newdata, counts = create_grid(current, ranges, checklist)
 
             # format the grid so that we can feed it to the model
