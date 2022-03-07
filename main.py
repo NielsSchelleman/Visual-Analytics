@@ -4,6 +4,7 @@ import numpy as np
 from itertools import combinations
 import plotly.graph_objects as go
 import pickle
+from scipy.spatial import distance
 
 
 
@@ -43,11 +44,16 @@ def getRanges(percentages, current_vals):
     #Update ranges for selected variables
     for variable, value, percentage in zip(variable_list, current_vals, percentages):
         #Only viable for valid observations
-        if value > 0:
+        if value > 0 and percentage > 0:
             #For now using initial ranges
             stepsize = np.round((ranges[variable][-1] - ranges[variable][0]) / len(ranges[variable]))
-            min = np.floor((1-(percentage/100))*value)
-            max = np.ceil((1+(percentage/100))*value)
+            if percentage <= 1:
+                min = np.floor((1-(percentage))*value)
+                max = np.ceil((1+(percentage))*value)
+            else: #Absolute values range search
+                min = value - int(percentage)
+                max = value + int(percentage)
+
             ranges[variable] = range(int(min), int(max), int(stepsize))
     return ranges
 
@@ -89,6 +95,27 @@ def create_grid(current, ranges, checklist):
             gridbase.append(val)
     grid = np.array(np.meshgrid(*gridbase, indexing='ij'))
     return pd.DataFrame(grid.reshape(grid.shape[0], -1).T), counts
+
+
+def get_most_similar(current, checklist, prediction, features):
+    opposing_group = features[features['RiskPerformance'] != prediction[0]].reset_index(drop=True)
+    important_features = opposing_group[checklist]
+    col_idx = [features.columns.get_loc(c) - 1 for c in checklist]
+    important_values = current[0][col_idx]
+
+
+    important_values = important_values.astype(float).reshape((1,-1))
+    important_features = np.array(important_features).astype(float)
+
+    dist = np.linalg.norm(important_features-important_values, axis=1)
+
+    idx_min = np.argmin(dist)
+
+
+    return opposing_group.loc[idx_min]
+
+
+
 
 
 def plot_heatmaps(counts, data, ranges):
@@ -227,6 +254,10 @@ if __name__ == '__main__':
             current = np.array([[EXRE, MOTO, MRTO, AMIF, NSAT, T60D, T90D, PTND, MMRD, D12M, MADE, NUTT, TO12, PEIT,
                                  MRI7, NIL6, I6E7, NFRB, NFIB, RTWB, ITWB, TWHU, PTWB]], dtype='object')
             prediction = model.predict(current)
+
+            most_similar = get_most_similar(current, checklist, prediction, features)
+            print('test')
+
             if len(checklist)>5 or len(checklist)<2:
                 return f'Output: {prediction}', 0, 0
 
@@ -236,6 +267,14 @@ if __name__ == '__main__':
                     percentages.append(children[i]['props']['children'][0]['props']['value'])
 
             # create a grid with all the data for a gridsearch
+            if len(np.array(percentages)[np.array(percentages)<0]) > 0:
+                #No negative ranges
+                #return f'Ranges should be positive', 0, 0
+                return html.H1([
+                    html.Span("Ranges should only be positive", style={'color':'red'})
+                ]), 0, 0
+
+
             ranges = getRanges(percentages, current)
             newdata, counts = create_grid(current, ranges, checklist)
 
