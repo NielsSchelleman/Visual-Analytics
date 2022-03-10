@@ -53,7 +53,15 @@ def getRanges(percentages, current_vals):
             else: #Absolute values range search
                 min = value - int(percentage)
                 max = value + int(percentage)
-
+            ranges[variable] = range(int(min), int(max), int(stepsize))
+        if value == 0:
+            stepsize = np.round((ranges[variable][-1] - ranges[variable][0]) / len(ranges[variable]))
+            if percentage <= 1:
+                min = 0
+                max = 0 + np.round((ranges[variable][-1] - ranges[variable][0])*(1-percentage))
+            else:  # Absolute values range search
+                min = 0
+                max = value + int(percentage)
             ranges[variable] = range(int(min), int(max), int(stepsize))
     return ranges
 
