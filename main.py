@@ -1,18 +1,19 @@
+import dash
 import pandas as pd
 from dash import Dash, html, dcc, Input, Output, exceptions
 import numpy as np
 from itertools import combinations
 import plotly.graph_objects as go
 import pickle
-from scipy.spatial import distance
-
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
+import plotly.express as px
 
 
 def getRanges(percentages, current_vals):
-    #Indices of chosen variables
+    # Indices of chosen variables
     non_zero_idx = np.nonzero(np.array(percentages))
 
-    #Keep only variables which ranges we want to change
+    # Keep only variables which ranges we want to change
     variable_list = np.array(rangeSearchChecklist())[non_zero_idx]
     current_vals = np.array(current_vals).flatten()[non_zero_idx]
     percentages = np.array(percentages)[non_zero_idx]
@@ -41,11 +42,11 @@ def getRanges(percentages, current_vals):
             "NumInstallTradesWBalance": range(1, 25),
             "NumBank/NatlTradesWHighUtilization": range(0, 25),
             "PercentTradesWBalance": range(0, 100)}
-    #Update ranges for selected variables
+    # Update ranges for selected variables
     for variable, value, percentage in zip(variable_list, current_vals, percentages):
-        #Only viable for valid observations
+        # Only viable for valid observations
         if value > 0 and percentage > 0:
-            #For now using initial ranges
+            # For now using initial ranges
             stepsize = np.round((ranges[variable][-1] - ranges[variable][0]) / len(ranges[variable]))
             if percentage <= 1:
                 min = np.floor((1-(percentage))*value)
@@ -146,6 +147,22 @@ def plot_heatmaps(counts, data, ranges):
         heatmaps.append(dcc.Graph(figure=fig))
     return heatmaps
 
+
+def prep_lda(features):
+    X = features.drop('RiskPerformance', axis=1)
+    y = features['RiskPerformance']
+    y_hat = model.predict(X)
+
+    lda = LDA(n_components=3)
+    y2 = [i if i == j else 'type1' if i == 'Bad' else 'type2' for i, j in zip(y, y_hat)]
+    dims = ['LD1', 'LD2', 'LD3']
+    components = lda.fit_transform(X, y2)
+    comp_df = pd.DataFrame(components, columns=dims)
+    comp_df['size'] = 1
+    comp_df['labels'] = y2
+    return comp_df, lda, dims
+
+
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
 
@@ -155,6 +172,9 @@ if __name__ == '__main__':
     # build a random forest classifier
     model = pickle.load(open('rf_mod.sav', 'rb'))
     margedict = {'margin-top': '3px'}
+
+    ldfa_df, lda_model, lda_dims = prep_lda(features)
+
     # Non label columns
     column_names = list(features.columns)
     column_names.remove(labelDimension)
@@ -167,12 +187,19 @@ if __name__ == '__main__':
     app = Dash(__name__)
 
     app.layout = html.Div([
-        html.Div(["Fill in between 2-5 items to check the range, all original values and % of total range to check"]),
+        html.Div(id='toptext'),
 
+        html.Div(id='searchbar', children=[
+        html.Button('Run Grid Search', id='button_counterexample_run', n_clicks=0,style={'margin-right':'3px'}),
+        html.Button('Perform LIME', id='button_LIME',n_clicks=0,style={'margin-right':'3px'}),
+        html.Button('Perform SHAP', id='button_SHAP',n_clicks=0,style={'margin-right':'3px'}),
+        html.Button('Show Interactive LDA',id='button_LDA',n_clicks=0,style={'margin-right':'3px'})
+        ],style={'width':'90%','display':'block','background-color':'#e9e9ed','padding':'10px','border-radius':'5px'}),
 
         html.Div([
                 dcc.Checklist(options=rangeSearchChecklist(),
                               id='rangeSearchChecklist',
+                              inputStyle={'display':'none'},
                               labelStyle={'display': 'block', 'height': '22px', 'width': '300px'})],
                  style={'width': '300px', 'display': 'inline-block'}),
 
@@ -187,14 +214,60 @@ if __name__ == '__main__':
 
         html.Div(id='percentages',style={'width': '160px', 'display': 'inline-block'}),
         html.Div(id='current_eval'),
-        html.H6("Which values should be modified? ( between 2 and 5)"),
+        html.Div(id='in-between-counterexample',style={'display':'none'}),
 
 
-        html.Button('Run Search', id='button_counterexample_run', n_clicks=0),
-        html.Div(id='heatmaps'),
 
+        # store information of current client
+        dcc.Store(id='store_person'),
+        # store a counter
+        html.Button(id='tally', n_clicks=0, style={'display':'none'}),
+
+
+
+        # store plots and only show last one
+        dcc.Store(id='heatmaps_plt', data=[None, -10, None]),
+        dcc.Store(id='LIME_plt', data=[None, -10, None]),
+        dcc.Store(id='SHAP_plt', data=[None, -10, None]),
+        dcc.Store(id='LDA_plt', data=[None, -10, None]),
+        #plot into here
+        html.Div(id='misc_persist', children=[
+            dcc.Checklist(id='lda_checklist',
+                          options=['Bad','Good','Type1','Type2','Client'],
+                          style={'display': 'none'})
+        ]),
+        html.Div(id='plot'),
 
     ])
+    # callbacks_rangesearch.
+
+    @app.callback(
+        Output('rangeSearchChecklist', 'inputStyle'),
+        Output('button_counterexample_run', 'style'),
+        Output('button_counterexample_run', 'children'),
+        Output('button_counterexample_run', 'n_clicks'),
+        Output('rangeSearchChecklist','value'),
+        Output('toptext', 'children'),
+        Input('button_counterexample_run', 'n_clicks'),
+    )
+    def Intermediate(button):
+        if button == 1 or button == 3:
+            return {'display': 'inline-block'},\
+                   {'background-color': 'yellow', 'margin-right': '3px'},\
+                   'select columns', \
+                   1, \
+                   [], \
+                   ["Fill in between 2-5 items to check the range, all original values and % of total range to check"]
+        elif button == 2:
+            return {'display': 'none'},\
+                   {'background-color': '#e9e9ed', 'margin-right': '3px'},\
+                   'Run Grid Search', \
+                   2, \
+                   dash.no_update, \
+                   []
+
+        else:
+            raise exceptions.PreventUpdate
 
     @app.callback(
         Output('percentages','children'),
@@ -219,9 +292,7 @@ if __name__ == '__main__':
         return children
 
     @app.callback(
-        Output(component_id='current_eval', component_property='children'),
-        Output('button_counterexample_run', 'n_clicks'),
-        Output('heatmaps','children'),
+        Output('store_person','data'),
         Input('EXRE', 'value'),
         Input('MOTO', 'value'),
         Input('MRTO', 'value'),
@@ -244,30 +315,34 @@ if __name__ == '__main__':
         Input('RTWB', 'value'),
         Input('ITWB', 'value'),
         Input('TWHU', 'value'),
-        Input('PTWB', 'value'),
+        Input('PTWB', 'value'))
+    def create_profile(EXRE, MOTO, MRTO, AMIF, NSAT, T60D, T90D, PTND, MMRD, D12M, MADE, NUTT, TO12, PEIT, MRI7,
+                       NIL6, I6E7, NFRB, NFIB, RTWB, ITWB, TWHU, PTWB):
+        return np.array([[EXRE, MOTO, MRTO, AMIF, NSAT, T60D, T90D, PTND, MMRD, D12M, MADE, NUTT, TO12, PEIT,
+                          MRI7, NIL6, I6E7, NFRB, NFIB, RTWB, ITWB, TWHU, PTWB]], dtype='object')
+
+
+    @app.callback(
+        Output(component_id='current_eval', component_property='children'),
+        Output('heatmaps_plt','data'),
+        Input('store_person','data'),
         Input(component_id="button_counterexample_run",component_property='n_clicks'),
         Input('rangeSearchChecklist', 'value'),
-        Input('percentages', 'children')
+        Input('percentages', 'children'),
+        Input('tally','n_clicks')
     )
-    def counterExampleSearch(EXRE, MOTO, MRTO, AMIF, NSAT, T60D, T90D, PTND, MMRD, D12M, MADE, NUTT, TO12, PEIT, MRI7,
-                             NIL6, I6E7, NFRB, NFIB, RTWB, ITWB, TWHU, PTWB,
-                             button,
-                             checklist,
-                             children
-                             ):
-        if button == 0:
+    def counterExampleSearch(current, button, checklist, children, tally):
+        if button != 2:
             raise exceptions.PreventUpdate
 
         else:
-            current = np.array([[EXRE, MOTO, MRTO, AMIF, NSAT, T60D, T90D, PTND, MMRD, D12M, MADE, NUTT, TO12, PEIT,
-                                 MRI7, NIL6, I6E7, NFRB, NFIB, RTWB, ITWB, TWHU, PTWB]], dtype='object')
             prediction = model.predict(current)
 
             most_similar = get_most_similar(current, checklist, prediction, features)
             print('test')
 
-            if len(checklist)>5 or len(checklist)<2:
-                return f'Output: {prediction}', 0, 0
+            if len(checklist) > 5 or len(checklist) < 2:
+                return f'Output: {prediction}', [0, tally-1]
 
             #Get all percentage ranges
             percentages = []
@@ -297,6 +372,79 @@ if __name__ == '__main__':
 
             # find all axes for the plot
             heatmaps = plot_heatmaps(counts, newdata, ranges)
-            return f'Output: {prediction}', 0, html.Div(heatmaps)
+            return f'Output: {prediction}', [html.Div(heatmaps), tally+1, 'heatmap']
+
+    @app.callback(
+        Output('LDA_plt','data'),
+        Output('button_LDA', 'n_clicks'),
+        Input('store_person', 'data'),
+        Input('button_LDA', 'n_clicks'),
+        Input('tally', 'n_clicks'),
+        Input('lda_checklist', 'value')
+    )
+    def LDA_plotting(person, button, tally, checklist):
+        if button == 0:
+            raise exceptions.PreventUpdate
+        person_trans = lda_model.transform(pd.DataFrame(np.array(person[0]).reshape(1, 23), columns=features.keys()[1:]))[0]
+
+        ldfa_df.loc[len(ldfa_df.index)] = {'LD1': person_trans[0],
+                                           'LD2': person_trans[1],
+                                           'LD3': person_trans[2],
+                                           'size': 10,
+                                           'labels': 'Client'}
+
+        labels = {
+            str(i): f"LD {i + 1} ({var:.1f}%)"
+            for i, var in enumerate(lda_model.explained_variance_ratio_ * 100)
+        }
+
+        fig = px.scatter_matrix(
+            ldfa_df,
+            labels=labels,
+            size='size',
+            size_max=5,
+            dimensions=lda_dims,
+            color='labels'
+        )
+        fig.update_traces(diagonal_visible=False)
+        fig.update_traces(marker=dict(line=dict(width=0)))
+
+        if checklist:
+            fig.for_each_trace(
+                lambda trace: trace.update(visible='legendonly') if trace.name in checklist else ()
+            )
+
+        return [html.Div(dcc.Graph(figure=fig)), tally+1, 'lda'], 0
+
+
+    @app.callback(
+        Output('tally', 'n_clicks'),
+        Output('plot', 'children'),
+        Output('misc_persist', 'children'),
+        Input('heatmaps_plt', 'data'),
+        Input('LIME_plt', 'data'),
+        Input('SHAP_plt', 'data'),
+        Input('LDA_plt', 'data'),
+    )
+    def ShowPlot(heatmap, LIME, SHAP, LDA):
+
+        curr_tally = -10
+        curr_plot = None
+        curr_name = None
+        for plot, tally, name in [heatmap,LIME,SHAP,LDA]:
+            if tally>curr_tally:
+                curr_tally = tally
+                curr_plot = plot
+
+        if curr_name == 'lda':
+            misc = html.Div(id='misc_persist', children=[
+                dcc.Checklist(id='lda_checklist',
+                              options=['Bad', 'Good', 'Type1', 'Type2', 'Client'],
+                              style={'display': 'inline-block'})])
+        else:
+            misc = html.Div(id='misc_persist', children=[
+                dcc.Checklist(id='lda_checklist', style={'display': 'none'})])
+
+        return curr_tally, curr_plot, misc
 
     app.run_server(debug=True)
