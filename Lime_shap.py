@@ -76,8 +76,7 @@ def shap_summary_plot(shap_values, features):
 
 class OG_explainer():
     def __init__(self, explainer, shap_values, data):
-        self.base_values = explainer.expected_value
-        self.expected_value = explainer.expected_value[0]
+        self.base_values = explainer.expected_value.mean()
         self.data = data
         self.values = shap_values
         if type(data) == pd.core.series.Series:
