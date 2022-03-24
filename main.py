@@ -189,13 +189,6 @@ if __name__ == '__main__':
     app.layout = html.Div([
         html.Div(id='toptext'),
 
-        html.Div(id='searchbar', children=[
-        html.Button('Run Grid Search', id='button_counterexample_run', n_clicks=0,style={'margin-right':'3px'}),
-        html.Button('Perform LIME', id='button_LIME',n_clicks=0,style={'margin-right':'3px'}),
-        html.Button('Perform SHAP', id='button_SHAP',n_clicks=0,style={'margin-right':'3px'}),
-        html.Button('Show Interactive LDA',id='button_LDA',n_clicks=0,style={'margin-right':'3px'})
-        ],style={'width':'90%','display':'block','background-color':'#e9e9ed','padding':'10px','border-radius':'5px'}),
-
         html.Div([
                 dcc.Checklist(options=rangeSearchChecklist(),
                               id='rangeSearchChecklist',
@@ -216,7 +209,13 @@ if __name__ == '__main__':
         html.Div(id='current_eval'),
         html.Div(id='in-between-counterexample',style={'display':'none'}),
 
-
+        html.Div(id='searchbar', children=[
+            html.Button('Run Grid Search', id='button_counterexample_run', n_clicks=0, style={'margin-right': '3px'}),
+            html.Button('Perform LIME', id='button_LIME', n_clicks=0, style={'margin-right': '3px'}),
+            html.Button('Perform SHAP', id='button_SHAP', n_clicks=0, style={'margin-right': '3px'}),
+            html.Button('Show Interactive LDA', id='button_LDA', n_clicks=0, style={'margin-right': '3px'})
+        ], style={'width': '90%', 'display': 'block', 'background-color': '#e9e9ed', 'padding': '10px',
+                  'border-radius': '5px'}),
 
         # store information of current client
         dcc.Store(id='store_person'),
@@ -338,8 +337,7 @@ if __name__ == '__main__':
         else:
             prediction = model.predict(current)
 
-            most_similar = get_most_similar(current, checklist, prediction, features)
-            print('test')
+            # most_similar = get_most_similar(current, checklist, prediction, features)
 
             if len(checklist) > 5 or len(checklist) < 2:
                 return f'Output: {prediction}', [0, tally-1]
