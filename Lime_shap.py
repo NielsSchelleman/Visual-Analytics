@@ -3,6 +3,7 @@ from lime import lime_tabular
 import numpy as np
 import pandas as pd
 import shap
+import matplotlib.pyplot as plt
 
 
 def get_model():
@@ -71,6 +72,7 @@ def calculate_shap_value(explainer, data):
 
 def shap_summary_plot(shap_values, features):
     shap.summary_plot(shap_values, features, plot_type='violin', show=False)
+    plt.savefig('shap_summary.png')
 
 class OG_explainer():
     def __init__(self, explainer, shap_values, data):
@@ -86,6 +88,7 @@ class OG_explainer():
 def shap_waterfall_plot(explainer, shap_values, data):
     thing = OG_explainer(explainer, shap_values[0], data)
     shap.plots.waterfall(thing)
+    plt.savefig('shap_waterfall.png')
 
 
 
