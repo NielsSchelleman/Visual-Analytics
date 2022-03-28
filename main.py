@@ -163,6 +163,36 @@ def prep_lda(features):
     return comp_df, lda, dims
 
 
+def plot_correlations():
+    X = features.drop('RiskPerformance', axis=1).corr()
+    dfs = []
+    for i in np.linspace(0, 1, 21):
+        d = X.copy()
+        for col in X.keys():
+            d[col] = d[col].where(d[col] >= i, other=0)
+        dfs.append(d)
+    # generate the frames. NB name
+    frames = [
+        go.Frame(data=go.Heatmap(z=df.values, x=df.columns, y=df.index, colorscale='Blues'), name=i / 20)
+        for i, df in enumerate(dfs)
+    ]
+
+    corrmap = go.Figure(data=frames[0].data, frames=frames).update_layout(
+
+        # iterate over frames to generate steps... NB frame name...
+        sliders=[{"steps": [{"args": [[f.name], {"frame": {"duration": 0, "redraw": True},
+                                                 "mode": "immediate", }, ],
+                             "label": f.name, "method": "animate", }
+                            for f in frames],
+                  'currentvalue': {"prefix": "minimum correlation treshold: "}}],
+        height=800,
+        xaxis={"title": 'Correlation Matrix', "tickangle": 30, 'side': 'top'},
+        font ={'size':14},
+        title_x=0.5,
+
+    )
+    return dcc.Graph(figure=corrmap,style={'width': '1000px', 'display': 'inline-block'})
+
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
 
@@ -188,7 +218,6 @@ if __name__ == '__main__':
 
     app.layout = html.Div([
         html.Div(id='toptext'),
-
         html.Div([
                 dcc.Checklist(options=rangeSearchChecklist(),
                               id='rangeSearchChecklist',
@@ -206,29 +235,50 @@ if __name__ == '__main__':
 
 
         html.Div(id='percentages',style={'width': '160px', 'display': 'inline-block'}),
+
+        #html.Div(id='correlations',
+        #         children=[plot_correlations(features.drop('RiskPerformance', axis=1))],
+        #         style={'display':'inline-block'}),
+
         html.Div(id='current_eval'),
         html.Div(id='in-between-counterexample',style={'display':'none'}),
 
         html.Div(id='searchbar', children=[
-            html.Button('Run Grid Search', id='button_counterexample_run', n_clicks=0, style={'margin-right': '3px'}),
-            html.Button('Perform LIME', id='button_LIME', n_clicks=0, style={'margin-right': '3px'}),
-            html.Button('Perform SHAP', id='button_SHAP', n_clicks=0, style={'margin-right': '3px'}),
-            html.Button('Show Interactive LDA', id='button_LDA', n_clicks=0, style={'margin-right': '3px'})
+            html.Div(id='global',children=[
+                html.P('global estimators'),
+                html.Br(),
+                html.Button('Show Interactive LDA', id='button_LDA', n_clicks=0, style={'margin-right': '3px'}),
+                html.Button('Correlation Matrix', id='button_corr', n_clicks=0, style={'margin-right': '3px'}),
+                html.Button('Value distribution',id='val_dist',n_clicks=0, style={'margin-right': '3px'})
+            ]),
+            html.Div(id='local', children=[
+                html.P('local estimators'),
+                html.Br(),
+                html.Button('Run Grid Search', id='button_counterexample_run', n_clicks=0,
+                            style={'margin-right': '3px'}),
+                html.Button('Perform LIME', id='button_LIME', n_clicks=0, style={'margin-right': '3px'}),
+                html.Button('Perform SHAP', id='button_SHAP', n_clicks=0, style={'margin-right': '3px'}),
+            ])
+
         ], style={'width': '90%', 'display': 'block', 'background-color': '#e9e9ed', 'padding': '10px',
                   'border-radius': '5px'}),
 
         # store information of current client
         dcc.Store(id='store_person'),
-        # store a counter
+
+        # store counters
+        html.Button(id='heatmap_finished', n_clicks=0, style={'display': 'none'}),
+        html.Button(id='heatmap_finished_2', n_clicks=0, style={'display': 'none'}),
         html.Button(id='tally', n_clicks=0, style={'display':'none'}),
 
 
 
         # store plots and only show last one
-        dcc.Store(id='heatmaps_plt', data=[None, -10, None]),
-        dcc.Store(id='LIME_plt', data=[None, -10, None]),
-        dcc.Store(id='SHAP_plt', data=[None, -10, None]),
-        dcc.Store(id='LDA_plt', data=[None, -10, None]),
+        dcc.Store(id='heatmaps_plt', data=[None, -10]),
+        dcc.Store(id='LIME_plt', data=[None, -10]),
+        dcc.Store(id='SHAP_plt', data=[None, -10]),
+        dcc.Store(id='LDA_plt', data=[None, -10]),
+        dcc.Store(id='Corr_plt', data=[None, -10]),
         #plot into here
         html.Div(id='misc_persist', children=[
             dcc.Checklist(id='lda_checklist',
@@ -247,23 +297,36 @@ if __name__ == '__main__':
         Output('button_counterexample_run', 'n_clicks'),
         Output('rangeSearchChecklist','value'),
         Output('toptext', 'children'),
+        Output('heatmap_finished_2', 'n_clicks'),
         Input('button_counterexample_run', 'n_clicks'),
+        Input('heatmap_finished', 'n_clicks'),
+        Input('heatmap_finished_2', 'n_clicks')
     )
-    def Intermediate(button):
+    def Intermediate(button, fin, fin2):
+        print(f'button:{button}')
         if button == 1 or button == 3:
             return {'display': 'inline-block'},\
                    {'background-color': 'yellow', 'margin-right': '3px'},\
                    'select columns', \
                    1, \
                    [], \
-                   ["Fill in between 2-5 items to check the range, all original values and % of total range to check"]
+                   ["Fill in between 2-5 items to check the range, all original values and % of total range to check"],\
+                   fin
         elif button == 2:
+            if fin > fin2:
+                print('reset')
+                range_vals = []
+                button = 0
+            else:
+                range_vals = dash.no_update
             return {'display': 'none'},\
                    {'background-color': '#e9e9ed', 'margin-right': '3px'},\
                    'Run Grid Search', \
-                   2, \
-                   dash.no_update, \
-                   []
+                   button, \
+                   range_vals, \
+                   [], \
+                   fin
+
 
         else:
             raise exceptions.PreventUpdate
@@ -324,13 +387,15 @@ if __name__ == '__main__':
     @app.callback(
         Output(component_id='current_eval', component_property='children'),
         Output('heatmaps_plt','data'),
+        Output('heatmap_finished','n_clicks'),
         Input('store_person','data'),
         Input(component_id="button_counterexample_run",component_property='n_clicks'),
         Input('rangeSearchChecklist', 'value'),
         Input('percentages', 'children'),
-        Input('tally','n_clicks')
+        Input('tally','n_clicks'),
+        Input('heatmap_finished','n_clicks')
     )
-    def counterExampleSearch(current, button, checklist, children, tally):
+    def counterExampleSearch(current, button, checklist, children, tally, fin):
         if button != 2:
             raise exceptions.PreventUpdate
 
@@ -340,7 +405,7 @@ if __name__ == '__main__':
             # most_similar = get_most_similar(current, checklist, prediction, features)
 
             if len(checklist) > 5 or len(checklist) < 2:
-                return f'Output: {prediction}', [0, tally-1]
+                return f'Output: {prediction}', [0, tally], fin
 
             #Get all percentage ranges
             percentages = []
@@ -370,7 +435,7 @@ if __name__ == '__main__':
 
             # find all axes for the plot
             heatmaps = plot_heatmaps(counts, newdata, ranges)
-            return f'Output: {prediction}', [html.Div(heatmaps), tally+1, 'heatmap']
+            return f'Output: {prediction}', [html.Div(heatmaps), tally+1], fin+1
 
     @app.callback(
         Output('LDA_plt','data'),
@@ -412,37 +477,40 @@ if __name__ == '__main__':
                 lambda trace: trace.update(visible='legendonly') if trace.name in checklist else ()
             )
 
-        return [html.Div(dcc.Graph(figure=fig)), tally+1, 'lda'], 0
+        return [html.Div(dcc.Graph(figure=fig)), tally+1], 0
 
+    @app.callback(
+        Output('Corr_plt', 'data'),
+        Output('button_corr', 'n_clicks'),
+        Input('button_corr', 'n_clicks'),
+        Input('tally', 'n_clicks'),
+
+    )
+    def plot_corr_matrix(button, tally):
+        if button == 0:
+            raise exceptions.PreventUpdate
+        return [plot_correlations(), tally+1], 0
 
     @app.callback(
         Output('tally', 'n_clicks'),
         Output('plot', 'children'),
-        Output('misc_persist', 'children'),
         Input('heatmaps_plt', 'data'),
         Input('LIME_plt', 'data'),
         Input('SHAP_plt', 'data'),
         Input('LDA_plt', 'data'),
+        Input('Corr_plt', 'data')
     )
-    def ShowPlot(heatmap, LIME, SHAP, LDA):
+    def ShowPlot(heatmap, LIME, SHAP, LDA, corr):
 
         curr_tally = -10
         curr_plot = None
-        curr_name = None
-        for plot, tally, name in [heatmap,LIME,SHAP,LDA]:
-            if tally>curr_tally:
+        for plot, tally in [heatmap, LIME, SHAP, LDA, corr]:
+            print(tally)
+            if tally > curr_tally:
                 curr_tally = tally
                 curr_plot = plot
 
-        if curr_name == 'lda':
-            misc = html.Div(id='misc_persist', children=[
-                dcc.Checklist(id='lda_checklist',
-                              options=['Bad', 'Good', 'Type1', 'Type2', 'Client'],
-                              style={'display': 'inline-block'})])
-        else:
-            misc = html.Div(id='misc_persist', children=[
-                dcc.Checklist(id='lda_checklist', style={'display': 'none'})])
 
-        return curr_tally, curr_plot, misc
+        return curr_tally, curr_plot
 
     app.run_server(debug=True)
