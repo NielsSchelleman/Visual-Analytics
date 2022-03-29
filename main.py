@@ -7,6 +7,9 @@ import plotly.graph_objects as go
 import pickle
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 import plotly.express as px
+from statsmodels.stats.proportion import proportion_confint
+
+
 
 
 def getRanges(percentages, current_vals):
@@ -55,14 +58,18 @@ def getRanges(percentages, current_vals):
                 min = value - int(percentage)
                 max = value + int(percentage)
             ranges[variable] = range(int(min), int(max), int(stepsize))
-        if value == 0:
+        if value == 0 and percentage > 0:
             stepsize = np.round((ranges[variable][-1] - ranges[variable][0]) / len(ranges[variable]))
             if percentage <= 1:
                 min = 0
-                max = 0 + np.round((ranges[variable][-1] - ranges[variable][0])*(1-percentage))
+                max = 0 + np.round((ranges[variable][-1] - ranges[variable][0]) * (percentage))
+                if (max - min) % stepsize == 0:
+                    max += 1
             else:  # Absolute values range search
                 min = 0
                 max = value + int(percentage)
+                if (max - min) % stepsize == 0:
+                    max += 1
             ranges[variable] = range(int(min), int(max), int(stepsize))
     return ranges
 
@@ -106,25 +113,31 @@ def create_grid(current, ranges, checklist):
     return pd.DataFrame(grid.reshape(grid.shape[0], -1).T), counts
 
 
-def get_most_similar(current, checklist, prediction, features):
-    opposing_group = features[features['RiskPerformance'] != prediction[0]].reset_index(drop=True)
-    important_features = opposing_group[checklist]
-    col_idx = [features.columns.get_loc(c) - 1 for c in checklist]
-    important_values = current[0][col_idx]
+def plot_most_similar(current,  same_group=False):
+    columns = list(features.columns)
+    #Select counter group
+    if same_group:
+        opposing_group = features[features['RiskPerformance'] == prediction[0]].reset_index(drop=True).drop('RiskPerformance', axis=1)
+    else:
+        opposing_group = features[features['RiskPerformance'] != 'Bad'].reset_index(drop=True).drop('RiskPerformance', axis=1)
 
-
-    important_values = important_values.astype(float).reshape((1,-1))
-    important_features = np.array(important_features).astype(float)
-
-    dist = np.linalg.norm(important_features-important_values, axis=1)
-
+    dist = np.linalg.norm(opposing_group - current[0], axis=1)
     idx_min = np.argmin(dist)
-
-
-    return opposing_group.loc[idx_min]
-
-
-
+    most_similar = list(opposing_group.loc[idx_min])
+    fig = go.Figure(layout=dict(xaxis_title='Features', yaxis_title='Values', title='Comparison to most similar person in '
+                                                                                    'group with loan accepted'),
+    data=[go.Bar(name = 'Me', x=columns, y=current[0]),
+                        go.Bar(name='Other', x=columns, y=most_similar)])
+    fig.update_layout(barmode='group')
+    mini = min(current[0])-1
+    maxi = max(current[0])+1
+    if mini<0 and maxi<0:
+        fig.update_yaxes(range=[mini, 0])
+    elif mini<0 and maxi>0:
+        fig.update_yaxes(range=[mini, maxi])
+    else:
+        fig.update_yaxes(range=[0, maxi])
+    return dcc.Graph(figure=fig, style={'width': '1000px', 'display': 'inline-block'})
 
 
 def plot_heatmaps(counts, data, ranges):
@@ -161,6 +174,27 @@ def prep_lda(features):
     comp_df['size'] = 1
     comp_df['labels'] = y2
     return comp_df, lda, dims
+
+
+def CI(values, prediction, model):
+    map = {'Good': 1, 'Bad': 0}
+    estimators = model.estimators_
+    prediction = map[prediction[0]]
+
+    same_classfied = []
+
+    for estimator in estimators:
+        new_pred = int(estimator.predict(values))
+
+        if new_pred == prediction:
+            same_classfied.append(1)
+        else:
+            same_classfied.append(0)
+
+    count = sum(same_classfied)
+    ci = proportion_confint(count, len(same_classfied))
+    ci = (round(ci[0], 3), round(ci[1], 3))
+    return ci
 
 
 def plot_correlations():
@@ -218,6 +252,7 @@ if __name__ == '__main__':
 
     app.layout = html.Div([
         html.Div(id='toptext'),
+
         html.Div([
                 dcc.Checklist(options=rangeSearchChecklist(),
                               id='rangeSearchChecklist',
@@ -258,6 +293,7 @@ if __name__ == '__main__':
                             style={'margin-right': '3px'}),
                 html.Button('Perform LIME', id='button_LIME', n_clicks=0, style={'margin-right': '3px'}),
                 html.Button('Perform SHAP', id='button_SHAP', n_clicks=0, style={'margin-right': '3px'}),
+                html.Button('Most Similar', id='button_sim', n_clicks=0, style={'margin-right': '3px'})
             ])
 
         ], style={'width': '90%', 'display': 'block', 'background-color': '#e9e9ed', 'padding': '10px',
@@ -279,6 +315,7 @@ if __name__ == '__main__':
         dcc.Store(id='SHAP_plt', data=[None, -10]),
         dcc.Store(id='LDA_plt', data=[None, -10]),
         dcc.Store(id='Corr_plt', data=[None, -10]),
+        dcc.Store(id='sim_plt', data=[None, -10]),
         #plot into here
         html.Div(id='misc_persist', children=[
             dcc.Checklist(id='lda_checklist',
@@ -295,7 +332,7 @@ if __name__ == '__main__':
         Output('button_counterexample_run', 'style'),
         Output('button_counterexample_run', 'children'),
         Output('button_counterexample_run', 'n_clicks'),
-        Output('rangeSearchChecklist','value'),
+        Output('rangeSearchChecklist', 'value'),
         Output('toptext', 'children'),
         Output('heatmap_finished_2', 'n_clicks'),
         Input('button_counterexample_run', 'n_clicks'),
@@ -305,12 +342,12 @@ if __name__ == '__main__':
     def Intermediate(button, fin, fin2):
         print(f'button:{button}')
         if button == 1 or button == 3:
-            return {'display': 'inline-block'},\
-                   {'background-color': 'yellow', 'margin-right': '3px'},\
+            return {'display': 'inline-block'}, \
+                   {'background-color': 'yellow', 'margin-right': '3px'}, \
                    'select columns', \
                    1, \
                    [], \
-                   ["Fill in between 2-5 items to check the range, all original values and % of total range to check"],\
+                   ["Fill in between 2-5 items to check the range, all original values and % of total range to check"], \
                    fin
         elif button == 2:
             if fin > fin2:
@@ -319,8 +356,8 @@ if __name__ == '__main__':
                 button = 0
             else:
                 range_vals = dash.no_update
-            return {'display': 'none'},\
-                   {'background-color': '#e9e9ed', 'margin-right': '3px'},\
+            return {'display': 'none'}, \
+                   {'background-color': '#e9e9ed', 'margin-right': '3px'}, \
                    'Run Grid Search', \
                    button, \
                    range_vals, \
@@ -401,8 +438,8 @@ if __name__ == '__main__':
 
         else:
             prediction = model.predict(current)
+            ci = CI(current, prediction, model)
 
-            # most_similar = get_most_similar(current, checklist, prediction, features)
 
             if len(checklist) > 5 or len(checklist) < 2:
                 return f'Output: {prediction}', [0, tally], fin
@@ -415,7 +452,6 @@ if __name__ == '__main__':
             # create a grid with all the data for a gridsearch
             if len(np.array(percentages)[np.array(percentages)<0]) > 0:
                 #No negative ranges
-                #return f'Ranges should be positive', 0, 0
                 return html.H1([
                     html.Span("Ranges should only be positive", style={'color':'red'})
                 ]), 0, 0
@@ -435,7 +471,8 @@ if __name__ == '__main__':
 
             # find all axes for the plot
             heatmaps = plot_heatmaps(counts, newdata, ranges)
-            return f'Output: {prediction}', [html.Div(heatmaps), tally+1], fin+1
+
+            return f'Output: {prediction} with 95% confidence interval: {ci}', [html.Div(heatmaps), tally+1], fin+1
 
     @app.callback(
         Output('LDA_plt','data'),
@@ -484,12 +521,23 @@ if __name__ == '__main__':
         Output('button_corr', 'n_clicks'),
         Input('button_corr', 'n_clicks'),
         Input('tally', 'n_clicks'),
-
     )
     def plot_corr_matrix(button, tally):
         if button == 0:
             raise exceptions.PreventUpdate
         return [plot_correlations(), tally+1], 0
+
+    @app.callback(
+        Output('sim_plt', 'data'),
+        Output('button_sim', 'n_clicks'),
+        Input('store_person', 'data'),
+        Input('button_sim', 'n_clicks'),
+        Input('tally', 'n_clicks'),
+    )
+    def plot_similar(person, button, tally):
+        if button == 0:
+            raise exceptions.PreventUpdate
+        return [plot_most_similar(person), tally+1], 0
 
     @app.callback(
         Output('tally', 'n_clicks'),
@@ -498,19 +546,20 @@ if __name__ == '__main__':
         Input('LIME_plt', 'data'),
         Input('SHAP_plt', 'data'),
         Input('LDA_plt', 'data'),
-        Input('Corr_plt', 'data')
+        Input('Corr_plt', 'data'),
+        Input('sim_plt', 'data')
     )
-    def ShowPlot(heatmap, LIME, SHAP, LDA, corr):
-
+    def ShowPlot(heatmap, LIME, SHAP, LDA, corr, sim):
         curr_tally = -10
         curr_plot = None
-        for plot, tally in [heatmap, LIME, SHAP, LDA, corr]:
+        for plot, tally in [heatmap, LIME, SHAP, LDA, corr, sim]:
             print(tally)
-            if tally > curr_tally:
+            if tally >= curr_tally:
                 curr_tally = tally
                 curr_plot = plot
 
 
         return curr_tally, curr_plot
+
 
     app.run_server(debug=True)
