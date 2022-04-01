@@ -227,6 +227,15 @@ def plot_correlations():
     )
     return dcc.Graph(figure=corrmap,style={'width': '1000px', 'display': 'inline-block'})
 
+def plot_violins(column):
+    X = features[column]
+    X = X.append(X)
+    y = features['RiskPerformance']
+    y_hat = model.predict(features.drop('RiskPerformance',axis=1))
+    y2 = [i if i == j else 'type1' if i == 'Bad' else 'type2' for i, j in zip(y, y_hat)]
+    y2 = pd.Series(y2).append(pd.Series(['total']*len(y2)))
+    return dcc.Graph(figure=px.violin(y=X, x=y2, color=y2, box=True, points="all", title=f'disribution of {column}'))
+
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
 
@@ -270,25 +279,20 @@ if __name__ == '__main__':
 
 
         html.Div(id='percentages',style={'width': '160px', 'display': 'inline-block'}),
-
-        #html.Div(id='correlations',
-        #         children=[plot_correlations(features.drop('RiskPerformance', axis=1))],
-        #         style={'display':'inline-block'}),
-
         html.Div(id='current_eval'),
         html.Div(id='in-between-counterexample',style={'display':'none'}),
 
         html.Div(id='searchbar', children=[
             html.Div(id='global',children=[
-                html.P('global estimators'),
-                html.Br(),
+                html.P('global explainers'),
                 html.Button('Show Interactive LDA', id='button_LDA', n_clicks=0, style={'margin-right': '3px'}),
                 html.Button('Correlation Matrix', id='button_corr', n_clicks=0, style={'margin-right': '3px'}),
-                html.Button('Value distribution',id='val_dist',n_clicks=0, style={'margin-right': '3px'})
+                dcc.Dropdown(rangeSearchChecklist(), placeholder="See feature distribution",
+                             id='dd_vals',style={'margin-right':'3px','display':'inline-block', 'width':'350px',
+                                                 'height':'30px','margin-bottom':'-10px'})
             ]),
             html.Div(id='local', children=[
-                html.P('local estimators'),
-                html.Br(),
+                html.P('local explainers'),
                 html.Button('Run Grid Search', id='button_counterexample_run', n_clicks=0,
                             style={'margin-right': '3px'}),
                 html.Button('Perform LIME', id='button_LIME', n_clicks=0, style={'margin-right': '3px'}),
@@ -301,12 +305,8 @@ if __name__ == '__main__':
 
         # store information of current client
         dcc.Store(id='store_person'),
-
-        # store counters
-        html.Button(id='heatmap_finished', n_clicks=0, style={'display': 'none'}),
-        html.Button(id='heatmap_finished_2', n_clicks=0, style={'display': 'none'}),
+        # store a counter
         html.Button(id='tally', n_clicks=0, style={'display':'none'}),
-
 
 
         # store plots and only show last one
@@ -315,6 +315,7 @@ if __name__ == '__main__':
         dcc.Store(id='SHAP_plt', data=[None, -10]),
         dcc.Store(id='LDA_plt', data=[None, -10]),
         dcc.Store(id='Corr_plt', data=[None, -10]),
+        dcc.Store(id='Val_plt', data=[None, -10]),
         dcc.Store(id='sim_plt', data=[None, -10]),
         #plot into here
         html.Div(id='misc_persist', children=[
@@ -327,46 +328,6 @@ if __name__ == '__main__':
     ])
     # callbacks_rangesearch.
 
-    @app.callback(
-        Output('rangeSearchChecklist', 'inputStyle'),
-        Output('button_counterexample_run', 'style'),
-        Output('button_counterexample_run', 'children'),
-        Output('button_counterexample_run', 'n_clicks'),
-        Output('rangeSearchChecklist', 'value'),
-        Output('toptext', 'children'),
-        Output('heatmap_finished_2', 'n_clicks'),
-        Input('button_counterexample_run', 'n_clicks'),
-        Input('heatmap_finished', 'n_clicks'),
-        Input('heatmap_finished_2', 'n_clicks')
-    )
-    def Intermediate(button, fin, fin2):
-        print(f'button:{button}')
-        if button == 1 or button == 3:
-            return {'display': 'inline-block'}, \
-                   {'background-color': 'yellow', 'margin-right': '3px'}, \
-                   'select columns', \
-                   1, \
-                   [], \
-                   ["Fill in between 2-5 items to check the range, all original values and % of total range to check"], \
-                   fin
-        elif button == 2:
-            if fin > fin2:
-                print('reset')
-                range_vals = []
-                button = 0
-            else:
-                range_vals = dash.no_update
-            return {'display': 'none'}, \
-                   {'background-color': '#e9e9ed', 'margin-right': '3px'}, \
-                   'Run Grid Search', \
-                   button, \
-                   range_vals, \
-                   [], \
-                   fin
-
-
-        else:
-            raise exceptions.PreventUpdate
 
     @app.callback(
         Output('percentages','children'),
@@ -424,15 +385,29 @@ if __name__ == '__main__':
     @app.callback(
         Output(component_id='current_eval', component_property='children'),
         Output('heatmaps_plt','data'),
-        Output('heatmap_finished','n_clicks'),
+        Output('rangeSearchChecklist', 'inputStyle'),
+        Output('button_counterexample_run', 'style'),
+        Output('button_counterexample_run', 'children'),
+        Output('button_counterexample_run', 'n_clicks'),
+        Output('rangeSearchChecklist', 'value'),
+        Output('toptext', 'children'),
         Input('store_person','data'),
         Input(component_id="button_counterexample_run",component_property='n_clicks'),
         Input('rangeSearchChecklist', 'value'),
         Input('percentages', 'children'),
-        Input('tally','n_clicks'),
-        Input('heatmap_finished','n_clicks')
+        Input('tally','n_clicks')
     )
-    def counterExampleSearch(current, button, checklist, children, tally, fin):
+    def counterExampleSearch(current, button, checklist, children, tally, ):
+        if button == 1:
+            return ' ',\
+                   [0, tally],\
+                   {'display': 'inline-block'},\
+                   {'background-color': 'yellow', 'margin-right': '3px'},\
+                   'select columns', \
+                   1,\
+                   dash.no_update, \
+                   ["Fill in between 2-5 items to check the range, all original values and % of total range to check"]
+
         if button != 2:
             raise exceptions.PreventUpdate
 
@@ -442,7 +417,8 @@ if __name__ == '__main__':
 
 
             if len(checklist) > 5 or len(checklist) < 2:
-                return f'Output: {prediction}', [0, tally], fin
+                return f'Output: {prediction}', [0, tally], {'display':'none'}, \
+                       {'background-color': '#e9e9ed', 'margin-right': '3px'}, 'Run Grid Search', dash.no_update, [], []
 
             #Get all percentage ranges
             percentages = []
@@ -455,7 +431,6 @@ if __name__ == '__main__':
                 return html.H1([
                     html.Span("Ranges should only be positive", style={'color':'red'})
                 ]), 0, 0
-
 
             ranges = getRanges(percentages, current)
             newdata, counts = create_grid(current, ranges, checklist)
@@ -470,9 +445,10 @@ if __name__ == '__main__':
             newdata['num_outcome'] = newdata.outcome.cat.codes
 
             # find all axes for the plot
-            heatmaps = plot_heatmaps(counts, newdata, ranges)
 
-            return f'Output: {prediction} with 95% confidence interval: {ci}', [html.Div(heatmaps), tally+1], fin+1
+            heatmaps = plot_heatmaps(counts, newdata, ranges)
+            return f'Output: {prediction} with 95% confidence interval: {ci}', [html.Div(heatmaps), tally+1], {'display': 'none'}, \
+                   {'background-color': '#e9e9ed', 'margin-right': '3px'}, 'Run Grid Search', 0, [], []
 
     @app.callback(
         Output('LDA_plt','data'),
@@ -486,8 +462,8 @@ if __name__ == '__main__':
         if button == 0:
             raise exceptions.PreventUpdate
         person_trans = lda_model.transform(pd.DataFrame(np.array(person[0]).reshape(1, 23), columns=features.keys()[1:]))[0]
-
-        ldfa_df.loc[len(ldfa_df.index)] = {'LD1': person_trans[0],
+        n_df = ldfa_df.copy()
+        n_df.loc[len(n_df.index)] = {'LD1': person_trans[0],
                                            'LD2': person_trans[1],
                                            'LD3': person_trans[2],
                                            'size': 10,
@@ -499,7 +475,7 @@ if __name__ == '__main__':
         }
 
         fig = px.scatter_matrix(
-            ldfa_df,
+            n_df,
             labels=labels,
             size='size',
             size_max=5,
@@ -521,11 +497,24 @@ if __name__ == '__main__':
         Output('button_corr', 'n_clicks'),
         Input('button_corr', 'n_clicks'),
         Input('tally', 'n_clicks'),
+
     )
     def plot_corr_matrix(button, tally):
         if button == 0:
             raise exceptions.PreventUpdate
         return [plot_correlations(), tally+1], 0
+
+    @app.callback(
+        Output('Val_plt', 'data'),
+        Output('dd_vals', 'value'),
+        Input('dd_vals', 'value'),
+        Input('tally', 'n_clicks')
+    )
+    def plot_vals(vals, tally):
+        if not vals:
+            raise exceptions.PreventUpdate
+        else:
+            return [plot_violins(vals), tally+1], []
 
     @app.callback(
         Output('sim_plt', 'data'),
@@ -547,19 +536,18 @@ if __name__ == '__main__':
         Input('SHAP_plt', 'data'),
         Input('LDA_plt', 'data'),
         Input('Corr_plt', 'data'),
+        Input('Val_plt', 'data'),
         Input('sim_plt', 'data')
     )
-    def ShowPlot(heatmap, LIME, SHAP, LDA, corr, sim):
+    def ShowPlot(heatmap, LIME, SHAP, LDA, corr, vals, sim):
+
         curr_tally = -10
         curr_plot = None
-        for plot, tally in [heatmap, LIME, SHAP, LDA, corr, sim]:
-            print(tally)
-            if tally >= curr_tally:
+        for plot, tally in [heatmap, LIME, SHAP, LDA, corr, vals, sim]:
+            if tally > curr_tally:
                 curr_tally = tally
                 curr_plot = plot
 
-
         return curr_tally, curr_plot
-
 
     app.run_server(debug=True)
