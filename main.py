@@ -113,6 +113,20 @@ def create_grid(current, ranges, checklist):
     return pd.DataFrame(grid.reshape(grid.shape[0], -1).T), counts
 
 
+def plot_Lime(inputvalues):
+    """returns the object of an image of a lime explainer plot"""
+    lime_model = Lime_shap.get_lime_model(features) # features is taken from outside the function
+    Lime_shap.lime_explain(lime_model, inputvalues)
+    return html.Img(id='lime_explain.png')
+
+def plot_Shap(inputvalues):
+    """returns the object of an image of a shap waterfall plot"""
+    shap_model = Lime_shap.get_shap_model(model) # model is taken from outside the function
+    shapvalue = Lime_shap.calculate_shap_value(shap_model, inputvalues)
+    Lime_shap.shap_waterfall_plot(shap_model, shapvalue, features) # features is taken from outside the function
+    return html.Img(id='shap_waterfall.png')
+
+
 def plot_most_similar(current,  same_group=False):
     columns = list(features.columns)
     #Select counter group
