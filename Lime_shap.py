@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 
 def get_model():
     try:
-        raise the_roof # purely to check if the except statement works, remove later
         model = pickle.load(open('rf_mod.sav', 'rb'))
     except:
         from Model import buildModel

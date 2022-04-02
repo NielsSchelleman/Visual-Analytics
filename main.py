@@ -8,7 +8,7 @@ import pickle
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 import plotly.express as px
 from statsmodels.stats.proportion import proportion_confint
-
+import Lime_shap
 
 
 
@@ -331,6 +331,8 @@ if __name__ == '__main__':
         dcc.Store(id='Corr_plt', data=[None, -10]),
         dcc.Store(id='Val_plt', data=[None, -10]),
         dcc.Store(id='sim_plt', data=[None, -10]),
+        dcc.Store(id='lime_plt', data=[None, -10]),
+        dcc.Store(id='shap_plt', data=[None, -10]),
         #plot into here
         html.Div(id='misc_persist', children=[
             dcc.Checklist(id='lda_checklist',
@@ -543,6 +545,30 @@ if __name__ == '__main__':
         return [plot_most_similar(person), tally+1], 0
 
     @app.callback(
+        Output('lime_plt','data'),
+        Output('button_LIME','n_clicks'),
+        Input('store_person', 'data'),
+        Input('button_LIME', 'n_clicks'),
+        Input('tally','n_clicks')
+    )
+    def plot_lime(person, button, tally):
+        if button == 0:
+            raise exceptions.PreventUpdate
+        return [plot_Lime(person), tally+1], 0
+
+    @app.callback(
+        Output('shap_plt','data'),
+        Output('button_SHAP','n_clicks'),
+        Input('store_person', 'data'),
+        Input('button_SHAP', 'n_clicks'),
+        Input('tally','n_clicks')
+    )
+    def plot_shap(person, button, tally):
+        if button == 0:
+            raise exceptions.PreventUpdate
+        return [plot_Shap(person), tally+1], 0
+
+    @app.callback(
         Output('tally', 'n_clicks'),
         Output('plot', 'children'),
         Input('heatmaps_plt', 'data'),
@@ -551,13 +577,15 @@ if __name__ == '__main__':
         Input('LDA_plt', 'data'),
         Input('Corr_plt', 'data'),
         Input('Val_plt', 'data'),
-        Input('sim_plt', 'data')
+        Input('sim_plt', 'data'),
+        Input('lime_plt', 'data'),
+        Input('shap_plt','data')
     )
-    def ShowPlot(heatmap, LIME, SHAP, LDA, corr, vals, sim):
+    def ShowPlot(heatmap, LIME, SHAP, LDA, corr, vals, sim, lime, shap):
 
         curr_tally = -10
         curr_plot = None
-        for plot, tally in [heatmap, LIME, SHAP, LDA, corr, vals, sim]:
+        for plot, tally in [heatmap, LIME, SHAP, LDA, corr, vals, sim, lime, shap]:
             if tally > curr_tally:
                 curr_tally = tally
                 curr_plot = plot
