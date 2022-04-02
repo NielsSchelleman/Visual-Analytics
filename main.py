@@ -154,6 +154,7 @@ def plot_most_similar(current,  same_group=False):
         fig.update_yaxes(range=[0, maxi])
     return dcc.Graph(figure=fig, style={'width': '1000px', 'display': 'inline-block'})
 
+
 def plot_Lime(inputvalues):
     """returns the object of an image of a lime explainer plot"""
     lime_model = Lime_shap.get_lime_model(features) # features is taken from outside the function
