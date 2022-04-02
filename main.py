@@ -158,22 +158,20 @@ def plot_Lime(inputvalues):
     """returns the object of an image of a lime explainer plot"""
     lime_model = Lime_shap.get_lime_model(features) # features is taken from outside the function
     Lime_shap.lime_explain(lime_model, inputvalues)
-    image_filename = 'lime_explain.png'
-    # encoded_image = base64.b64encode(open(image_filename, 'rb').read())
-    #This png is shown by using html.Img(src='data:image/png;base64,{}'.format(encoded_image))
-    return html.Img(id=image_filename)
+    return html.Img(id='lime_explain.png')
 
 def plot_Shap(inputvalues):
-    """returns the encoded image of a shap waterfall plot"""
+    """returns the object of an image of a shap waterfall plot"""
     shap_model = Lime_shap.get_shap_model(model) # model is taken from outside the function
     shapvalue = Lime_shap.calculate_shap_value(shap_model, inputvalues)
     Lime_shap.shap_waterfall_plot(shap_model, shapvalue, features) # features is taken from outside the function
-    image_filename = 'shap_waterfall.png'
-    # encoded_image = base64.b64encode(open(image_filename, 'rb').read())
-    #This png is shown by using html.Img(src='data:image/png;base64,{}'.format(encoded_image))
-    return html.Img(id=image_filename)
+    return html.Img(id='shap_waterfall.png')
 
-
+def summary_shap(data):
+    shapmodel = Lime_shap.get_shap_model()
+    shap_values = Lime_shap.get_shap_values(shapmodel, data)
+    Lime_shap.shap_summary_plot(shap_values, data)
+    return html.Img(id='shap_summary.png')
 
 def plot_heatmaps(counts, data, ranges):
     axes = list(combinations(counts, 2))
@@ -580,17 +578,6 @@ if __name__ == '__main__':
                 curr_plot = plot
 
         return curr_tally, curr_plot
-
-    def runLime(vals, tally):
-        if not vals:
-            raise exceptions.PreventUpdate
-        else:
-            return [Lime_shap.lime_explain(model, vals), tally+1], []
-
-    @app.callback(
-
-    )
-
 
 
     app.run_server(debug=True)
