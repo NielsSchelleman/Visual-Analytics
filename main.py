@@ -8,8 +8,8 @@ import pickle
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 import plotly.express as px
 from statsmodels.stats.proportion import proportion_confint
-
-
+import Lime_shap
+import base64
 
 
 def getRanges(percentages, current_vals):
@@ -98,7 +98,23 @@ def rangeSearchChecklist():
             "NumBank/NatlTradesWHighUtilization",
             "PercentTradesWBalance"]
 
+def get_model():
+    try:
+        model = pickle.load(open('rf_mod.sav', 'rb'))
+    except:
+        from Model import buildModel
 
+        # load in the dataset
+        features = pd.read_csv('heloc_dataset_v1.csv')
+
+        # the columns that stores the labels
+        labelDimension = "RiskPerformance"
+
+        # build a random forest classifier
+        model = buildModel(features, labelDimension)
+
+        pickle.dump(model, open('rf_mod.sav', 'wb'))
+    return model
 
 def create_grid(current, ranges, checklist):
     gridbase = []
@@ -111,7 +127,6 @@ def create_grid(current, ranges, checklist):
             gridbase.append(val)
     grid = np.array(np.meshgrid(*gridbase, indexing='ij'))
     return pd.DataFrame(grid.reshape(grid.shape[0], -1).T), counts
-
 
 def plot_most_similar(current,  same_group=False):
     columns = list(features.columns)
@@ -139,6 +154,26 @@ def plot_most_similar(current,  same_group=False):
         fig.update_yaxes(range=[0, maxi])
     return dcc.Graph(figure=fig, style={'width': '1000px', 'display': 'inline-block'})
 
+def plot_Lime(inputvalues):
+    """returns the object of an image of a lime explainer plot"""
+    lime_model = Lime_shap.get_lime_model(features) # features is taken from outside the function
+    Lime_shap.lime_explain(lime_model, inputvalues)
+    image_filename = 'lime_explain.png'
+    # encoded_image = base64.b64encode(open(image_filename, 'rb').read())
+    #This png is shown by using html.Img(src='data:image/png;base64,{}'.format(encoded_image))
+    return html.Img(id=image_filename)
+
+def plot_Shap(inputvalues):
+    """returns the encoded image of a shap waterfall plot"""
+    shap_model = Lime_shap.get_shap_model(model) # model is taken from outside the function
+    shapvalue = Lime_shap.calculate_shap_value(shap_model, inputvalues)
+    Lime_shap.shap_waterfall_plot(shap_model, shapvalue, features) # features is taken from outside the function
+    image_filename = 'shap_waterfall.png'
+    # encoded_image = base64.b64encode(open(image_filename, 'rb').read())
+    #This png is shown by using html.Img(src='data:image/png;base64,{}'.format(encoded_image))
+    return html.Img(id=image_filename)
+
+
 
 def plot_heatmaps(counts, data, ranges):
     axes = list(combinations(counts, 2))
@@ -160,7 +195,6 @@ def plot_heatmaps(counts, data, ranges):
         heatmaps.append(dcc.Graph(figure=fig))
     return heatmaps
 
-
 def prep_lda(features):
     X = features.drop('RiskPerformance', axis=1)
     y = features['RiskPerformance']
@@ -174,7 +208,6 @@ def prep_lda(features):
     comp_df['size'] = 1
     comp_df['labels'] = y2
     return comp_df, lda, dims
-
 
 def CI(values, prediction, model):
     map = {'Good': 1, 'Bad': 0}
@@ -195,7 +228,6 @@ def CI(values, prediction, model):
     ci = proportion_confint(count, len(same_classfied))
     ci = (round(ci[0], 3), round(ci[1], 3))
     return ci
-
 
 def plot_correlations():
     X = features.drop('RiskPerformance', axis=1).corr()
@@ -238,12 +270,11 @@ def plot_violins(column):
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-
     features = pd.read_csv('data/heloc_dataset_v1.csv')
     # the columns that stores the labels
     labelDimension = "RiskPerformance"
     # build a random forest classifier
-    model = pickle.load(open('rf_mod.sav', 'rb'))
+    model = get_model()
     margedict = {'margin-top': '3px'}
 
     ldfa_df, lda_model, lda_dims = prep_lda(features)
@@ -391,7 +422,7 @@ if __name__ == '__main__':
         Output('button_counterexample_run', 'n_clicks'),
         Output('rangeSearchChecklist', 'value'),
         Output('toptext', 'children'),
-        Input('store_person','data'),
+        Input('store_person', 'data'),
         Input(component_id="button_counterexample_run",component_property='n_clicks'),
         Input('rangeSearchChecklist', 'value'),
         Input('percentages', 'children'),
@@ -549,5 +580,17 @@ if __name__ == '__main__':
                 curr_plot = plot
 
         return curr_tally, curr_plot
+
+    def runLime(vals, tally):
+        if not vals:
+            raise exceptions.PreventUpdate
+        else:
+            return [Lime_shap.lime_explain(model, vals), tally+1], []
+
+    @app.callback(
+
+    )
+
+
 
     app.run_server(debug=True)

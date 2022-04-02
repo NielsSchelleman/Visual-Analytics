@@ -6,38 +6,21 @@ import shap
 import matplotlib.pyplot as plt
 
 
-def get_model():
-    try:
-        raise the_roof # purely to check if the except statement works, remove later
-        model = pickle.load(open('rf_mod.sav', 'rb'))
-    except:
-        from Model import buildModel
-
-        # load in the dataset
-        features = pd.read_csv('heloc_dataset_v1.csv')
-
-        # the columns that stores the labels
-        labelDimension = "RiskPerformance"
-
-        # build a random forest classifier
-        model = buildModel(features, labelDimension)
-
-        pickle.dump(model, open('rf_mod.sav', 'wb')) #todo check if this works
-    return model
-
 def get_lime_model(data):
     try:
-        lime_explainer = pickle.load(open('lime.sav', 'rb')) #todo check if this works
+        lime_explainer = pickle.load(open('lime.sav', 'rb'))
     except:
-        features = data.drop(['RiskPerformance'], axis=1)
-        # y_lime = features['RiskPerformance']
+        try:
+            features = data.drop(['RiskPerformance'], axis=1)
+        except:
+            pass
 
         lime_explainer = lime_tabular.LimeTabularExplainer(
             training_data=np.array(features),
             feature_names=features.columns,
             class_names=['Bad', 'Good'],
             mode='classification')
-        pickle.dump(lime_explainer, open('lime.sav', 'wb') ) # todo check if this works
+        pickle.dump(lime_explainer, open('lime.sav', 'wb') )
     return lime_explainer
 
 def lime_explain(model, input_instance):
@@ -46,23 +29,23 @@ def lime_explain(model, input_instance):
         data_row=input_instance,
         predict_fn=model.predict_proba
     )
-    lime_exp.save_to_file('lime_explain.html',show_table=True)
+    lime_exp.save_to_file('lime_explain.html', show_table=True)
     lime_exp.as_pyplot_figure().savefig('lime_explain.png')
 
 def get_shap_model(model):
     try:
-        shap_model = pickle.load(open('shap.sav'), 'rb') #todo check if this works
+        shap_model = pickle.load(open('shap.sav', 'rb'))
     except:
         shap_model = shap.TreeExplainer(model)
-        pickle.dump(shap_model, open('shap.sav', 'wb')) #todo check if this works
+        pickle.dump(shap_model, open('shap.sav', 'wb'))
     return shap_model
 
 def get_shap_values(shap_explainer, features):
     try:
-        shap_values_all = pickle.load(open("shap.pikl", "rb"))
+        shap_values_all = pickle.load(open("shap.sav", "rb"))
     except:
         shap_values_all = shap_explainer.shap_values(features)
-        pickle.dump(shap_values_all, open('shap.pikl', 'wb'))
+        pickle.dump(shap_values_all, open('shap.sav', 'wb'))
     return shap_values_all
 
 def calculate_shap_value(explainer, data):
