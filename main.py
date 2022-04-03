@@ -353,7 +353,7 @@ if __name__ == '__main__':
                  style={'width': '300px', 'display': 'inline-block'}),
 
         html.Div([j for i in variable_values_ids for j in [html.Div([dcc.Input(id=i, value=-9, type='number',
-                                                                     style={'height': '15.9px',
+                                                                     style={'height': '21px',
                                                                             'width': '140px'})],
                                                                     style={'height': '22px',
                                                                            'width': '150px'})]],
@@ -386,29 +386,39 @@ if __name__ == '__main__':
                 dbc.Modal(
                     [
                         dbc.ModalHeader(dbc.ModalTitle("Linear Discriminant Analysis")),
-                        dbc.ModalBody("LDA modal"),
+                        dbc.ModalBody("""This button plots three linear discriminants into a scatterplot matrix using
+                        linear discriminant analysis 
+                        (https://www.analyticsvidhya.com/blog/2021/08/a-brief-introduction-to-linear-discriminant-analysis/).
+                        The plots show values which are true positives (good), true negatives (bad), 
+                        type 1 errors (type1), type 2 errors (type2) as well as a bigger dot showing the currently entered
+                        client.
+                        """),
                     ],
                     id="A_LDA",
-                    size="sm",
+                    size="lg",
                     is_open=False
                 ),
 
                 dbc.Modal(
                     [
                         dbc.ModalHeader(dbc.ModalTitle("Plot Correlations")),
-                        dbc.ModalBody("Correlations modal"),
+                        dbc.ModalBody("""This button plots a correlation matrix 
+                        (https://www.displayr.com/what-is-a-correlation-matrix/) between all the features with
+                        a threshold slider where everything below the threshold is set to 0."""),
                     ],
                     id="A_corr",
-                    size="sm",
+                    size="lg",
                     is_open=False
                 ),
                 dbc.Modal(
                     [
                         dbc.ModalHeader(dbc.ModalTitle("Plot Feature Distribution")),
-                        dbc.ModalBody("Feature distribution modal"),
+                        dbc.ModalBody("""This dropdown menu allows you to select a feature and generate a violinplot
+                         (https://towardsdatascience.com/violin-plots-explained-fb1d115e023d) for the feature and each
+                         subgroup in the feature."""),
                     ],
                     id="A_feature",
-                    size="sm",
+                    size="lg",
                     is_open=False
                 )
             ]),
@@ -430,37 +440,48 @@ if __name__ == '__main__':
                 dbc.Modal(
                     [
                         dbc.ModalHeader(dbc.ModalTitle("Grid Search")),
-                        dbc.ModalBody("Grid search modal"),
+                        dbc.ModalBody("""Runs in two stages. In stage 1 you select 2-5 different features using the
+                        checkboxes that appear after clicking the button. For each of these features you must also 
+                        include a range to search in either percentages of the total range (a value between 0 and 1)
+                        or an absolute amount of steps (an integer value). In stage 2 you press the button again and
+                        a grid search will run over each combination of feature values within the range. It then 
+                        prints a heatmap for each combination of two factors where the color indicates the fraction of
+                        the two values combined with the other features will result in a good result."""),
                     ],
                     id="A_grid",
-                    size="sm",
+                    size="lg",
                     is_open=False
                 ),
                 dbc.Modal(
                     [
                         dbc.ModalHeader(dbc.ModalTitle("Lime")),
-                        dbc.ModalBody("Lime modal"),
+                        dbc.ModalBody("""Performs a LIME analysis 
+                        (https://towardsdatascience.com/understanding-model-predictions-with-lime-a582fdff3a3b)
+                         using the client's data """),
                     ],
                     id="A_lime",
-                    size="sm",
+                    size="lg",
                     is_open=False
                 ),
                 dbc.Modal(
                     [
                         dbc.ModalHeader(dbc.ModalTitle("Shap")),
-                        dbc.ModalBody("Shap modal"),
+                        dbc.ModalBody("""Performs a SHAP analysis 
+                        (https://www.vantage-ai.com/blog/burning-down-the-black-box-of-ml-using-shap)
+                         using the client's data"""),
                     ],
                     id="A_shap",
-                    size="sm",
+                    size="lg",
                     is_open=False
                 ),
                 dbc.Modal(
                     [
                         dbc.ModalHeader(dbc.ModalTitle("Similar")),
-                        dbc.ModalBody("Similarity modal"),
+                        dbc.ModalBody("""Plots a bargraph with the current client's data and the most similar other data
+                                      point in the dataset"""),
                     ],
                     id="A_sim",
-                    size="sm",
+                    size="lg",
                     is_open=False
                 ),
             ])
@@ -516,7 +537,7 @@ if __name__ == '__main__':
             if i in checklist:
                 children.append(html.Div([
                     dcc.Input(id=i+'_%', value=10, type='number',
-                              style={'display': 'block', 'height': '15.9px', 'width': '140px',
+                              style={'display': 'block', 'height': '21px', 'width': '140px',
                                      'padding-left': '2px'})],
                     style={'height': '22px', 'width': '150px'}
                 ))
