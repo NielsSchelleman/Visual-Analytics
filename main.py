@@ -641,3 +641,4 @@ if __name__ == '__main__':
         return curr_tally, curr_plot
 
     app.run_server(debug=True)
+
