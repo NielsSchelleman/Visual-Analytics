@@ -137,6 +137,7 @@ def plot_Lime(inputvalues):
     encoded_image = base64.b64encode(open('lime_explain.jpg', 'rb').read()).decode('ascii')
     return html.Img(id='limeimage',src='data:image/png;base64,{}'.format(encoded_image))
 
+
 def plot_Shap(inputvalues):
     """returns the object of an image of a shap waterfall plot"""
     shap_model = Lime_shap.get_shap_model(model)  # model is taken from outside the function
@@ -148,14 +149,16 @@ def plot_Shap(inputvalues):
 def plot_Shap_Summary():
     try:  # if the image already exists
         encoded_image = base64.b64encode(open('shap_summary.png', 'rb').read()).decode('ascii')
-        return html.Img(src='data:image/png;base64,{}'.format(encoded_image))
+        #return html.Img(src='data:image/png;base64,{}'.format(encoded_image))
+        return encoded_image
     except:  # otherwise we first create it
         features_ = features.drop('RiskPerformance', axis=1)
         shap_model = Lime_shap.get_shap_model(model)  # model is taken from outside the function
         shap_values = Lime_shap.get_shap_values(shap_model, features_)  # features is taken from outside the function
         Lime_shap.shap_summary_plot(shap_values, features_)# features is taken from outside the function
         encoded_image = base64.b64encode(open('shap_summary.png', 'rb').read()).decode('ascii')
-        return html.Img(id='shapsummary', src='data:image/png;base64,{}'.format(encoded_image))
+        #return html.Img(id='shapsummary', src='data:image/png;base64,{}'.format(encoded_image))
+        return encoded_image
 
 def plot_most_similar(current,  same_group=False):
     columns = list(features.columns)
@@ -328,8 +331,9 @@ if __name__ == '__main__':
 
         html.Div(id='percentages',style={'width': '160px', 'display': 'inline-block'}),
 
-        html.Div(children=plot_Shap_Summary(), style={'display': 'inline-block', 'width': '625px'}),
-
+        #html.Div(children=plot_Shap_Summary(), style={'display': 'inline-block', 'width': '625px'}),
+        html.Img(id='shapsum', src='data:image/png;base64,{}'.format(plot_Shap_Summary()),
+                 style={'width':'625px','margin-left':'100px'}),
 
         html.Div(id='current_eval'),
         html.Div(id='in-between-counterexample', style={'display': 'none'}),
