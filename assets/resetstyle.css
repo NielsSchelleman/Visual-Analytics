@@ -1,0 +1,46 @@
+body { margin: 0;
+       background-color: #EEF1EF;
+	   font-family: sans-serif;}
+	   
+#info {height: 50px;
+	  width:500px;
+	  display:inline-block;
+	  font-size: 32px;
+	  margin-top: 0px;
+	  font-family: sans-serif;
+	  margin-bottom: 5px;
+	  color: rgb(255, 255, 255);
+	  padding-left: 10px;
+	  padding-top: 10px;
+	}
+
+#topbar {width: 100%;
+		background-color: rgb(28, 35, 33);}
+	   
+#rangeSearchChecklist {font-family: sans-serif;
+						padding-left: 10px;
+						display: inline-block;
+						padding-top:5px;
+						padding-bottom:5px;}
+						
+#toptext {width:1000px;
+		  display:inline-block;
+
+		  font-size: 24px;
+		  font-family: sans-serif;
+		  color: rgb(255, 255, 255);}
+		  
+		  
+#searchbar{background-color:#1C2321;
+			padding-left: 30px;
+			color:#FFFFFF;
+			font-size:18px;}
+
+#global_text{padding-left: 200px;}
+#local_text{padding-left: 200px;}
+
+#shapimage{width:1700px;}
+
+#limeimage{width:1700px;}
+
+#shapsummary{width:625px;}

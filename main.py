@@ -1,7 +1,6 @@
 import dash
 import pandas as pd
-from dash import Dash, html, dcc, Input, Output, exceptions, State
-import dash_bootstrap_components as dbc
+from dash import Dash, html, dcc, Input, Output, exceptions
 import numpy as np
 from itertools import combinations
 import plotly.graph_objects as go
@@ -9,6 +8,9 @@ import pickle
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 import plotly.express as px
 from statsmodels.stats.proportion import proportion_confint
+import Lime_shap
+import base64
+
 
 
 
@@ -287,13 +289,10 @@ if __name__ == '__main__':
             html.Div(id='global',children=[
                 html.P('global explainers'),
                 html.Button('Show Interactive LDA', id='button_LDA', n_clicks=0, style={'margin-right': '3px'}),
-                html.Button('?', id='Q_LDA', n_clicks=0, style={'margin-right': '3px', 'border-radius': '50%', "font-weight": "bold"}),
                 html.Button('Correlation Matrix', id='button_corr', n_clicks=0, style={'margin-right': '3px'}),
-                html.Button('?', id='Q_corr', n_clicks=0,
-                            style={'margin-right': '3px', 'border-radius': '50%', "font-weight": "bold"}),
                 dcc.Dropdown(rangeSearchChecklist(), placeholder="See feature distribution",
                              id='dd_vals',style={'margin-right':'3px','display':'inline-block', 'width':'350px',
-                                                 'height':'30px','margin-bottom':'-10px'}),
+                                                 'height':'30px','margin-bottom':'-10px', 'color':'#000000'}),
                 html.Button('?', id='Q_feature', n_clicks=0,
                             style={'margin-right': '3px', 'border-radius': '50%', "font-weight": "bold"}),
                 dbc.Modal(
@@ -329,53 +328,9 @@ if __name__ == '__main__':
                 html.P('local explainers'),
                 html.Button('Run Grid Search', id='button_counterexample_run', n_clicks=0,
                             style={'margin-right': '3px'}),
-                html.Button('?', id='Q_grid', n_clicks=0,
-                            style={'margin-right': '3px', 'border-radius': '50%', "font-weight": "bold"}),
                 html.Button('Perform LIME', id='button_LIME', n_clicks=0, style={'margin-right': '3px'}),
-                html.Button('?', id='Q_lime', n_clicks=0,
-                            style={'margin-right': '3px', 'border-radius': '50%', "font-weight": "bold"}),
                 html.Button('Perform SHAP', id='button_SHAP', n_clicks=0, style={'margin-right': '3px'}),
-                html.Button('?', id='Q_shap', n_clicks=0,
-                            style={'margin-right': '3px', 'border-radius': '50%', "font-weight": "bold"}),
-                html.Button('Most Similar', id='button_sim', n_clicks=0, style={'margin-right': '3px'}),
-                html.Button('?', id='Q_sim', n_clicks=0,
-                            style={'margin-right': '3px', 'border-radius': '50%', "font-weight": "bold"}),
-                dbc.Modal(
-                    [
-                        dbc.ModalHeader(dbc.ModalTitle("Perform Grid Search")),
-                        dbc.ModalBody("Grid Search modal"),
-                    ],
-                    id="A_grid",
-                    size="sm",
-                    is_open=False
-                ),
-                dbc.Modal(
-                    [
-                        dbc.ModalHeader(dbc.ModalTitle("Perform LIME")),
-                        dbc.ModalBody("LIME modal"),
-                    ],
-                    id="A_lime",
-                    size="sm",
-                    is_open=False
-                ),
-                dbc.Modal(
-                    [
-                        dbc.ModalHeader(dbc.ModalTitle("Perform Shap")),
-                        dbc.ModalBody("Shap modal"),
-                    ],
-                    id="A_shap",
-                    size="sm",
-                    is_open=False
-                ),
-                dbc.Modal(
-                    [
-                        dbc.ModalHeader(dbc.ModalTitle("Find most similar")),
-                        dbc.ModalBody("Similarity modal"),
-                    ],
-                    id="A_sim",
-                    size="sm",
-                    is_open=False
-                ),
+                html.Button('Most Similar', id='button_sim', n_clicks=0, style={'margin-right': '3px'})
             ])
 
         ], style={'width': '90%', 'display': 'block', 'background-color': '#e9e9ed', 'padding': '10px',
@@ -628,43 +583,4 @@ if __name__ == '__main__':
 
         return curr_tally, curr_plot
 
-    @app.callback(
-        Output("A_LDA", "is_open"),
-        Input("Q_LDA", "n_clicks"),
-        State("A_LDA", "is_open"),
-    )
-    def toggle_modal(n1, is_open):
-        if n1:
-            return not is_open
-        return is_open
-
-    @app.callback(
-        Output("A_corr", "is_open"),
-        Input("Q_corr", "n_clicks"),
-        State("A_corr", "is_open"),
-    )
-    def toggle_modal(n1, is_open):
-        if n1:
-            return not is_open
-        return is_open
-
-    @app.callback(
-        Output("A_feature", "is_open"),
-        Input("Q_feature", "n_clicks"),
-        State("A_feature", "is_open"),
-    )
-    def toggle_modal(n1, is_open):
-        if n1:
-            return not is_open
-        return is_open
-
-    # @app.callback(
-    #     Output("A_feature", "is_open"),
-    #     Input("Q_feature", "n_clicks"),
-    #     State("A_feature", "is_open"),
-    # )
-    # def toggle_modal(n1, is_open):
-    #     if n1:
-    #         return not is_open
-    #     return is_open
     app.run_server(debug=True)

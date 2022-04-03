@@ -6,30 +6,14 @@ import shap
 import matplotlib.pyplot as plt
 
 
-def get_model():
-    try:
-        raise the_roof # purely to check if the except statement works, remove later
-        model = pickle.load(open('rf_mod.sav', 'rb'))
-    except:
-        from Model import buildModel
-
-        # load in the dataset
-        features = pd.read_csv('heloc_dataset_v1.csv')
-
-        # the columns that stores the labels
-        labelDimension = "RiskPerformance"
-
-        # build a random forest classifier
-        model = buildModel(features, labelDimension)
-
-        pickle.dump(model, open('rf_mod.sav', 'wb')) #todo check if this works
-    return model
-
 def get_lime_model(data):
     try:
-        lime_explainer = pickle.load(open('lime.sav', 'rb')) #todo check if this works
+        lime_explainer = pickle.load(open('lime.sav', 'rb'))
     except:
-        features = data.drop(['RiskPerformance'], axis=1)
+        try:
+            features = data.drop(['RiskPerformance'], axis=1)
+        except:
+            features = data
         # y_lime = features['RiskPerformance']
 
         lime_explainer = lime_tabular.LimeTabularExplainer(
@@ -37,24 +21,29 @@ def get_lime_model(data):
             feature_names=features.columns,
             class_names=['Bad', 'Good'],
             mode='classification')
-        pickle.dump(lime_explainer, open('lime.sav', 'wb') ) # todo check if this works
+        # pickle.dump(lime_explainer, open('lime.sav', 'wb') )
     return lime_explainer
 
-def lime_explain(model, input_instance):
-    lime_exp = model.explain_instance(
+def lime_explain(limemodel, model, input_values):
+    input_instance = np.array(input_values[0])
+    lime_exp = limemodel.explain_instance(
         num_features=30,
         data_row=input_instance,
         predict_fn=model.predict_proba
     )
-    lime_exp.save_to_file('lime_explain.html',show_table=True)
-    lime_exp.as_pyplot_figure().savefig('lime_explain.png')
+    limeplot = lime_exp.as_pyplot_figure()
+    limeplot.subplots_adjust(left=0.15)
+    limeplot.set_size_inches(23, 10)
+    limeplot.savefig('lime_explain.jpg')
+    plt.clf()
+    print('lime explained')
 
 def get_shap_model(model):
     try:
-        shap_model = pickle.load(open('shap.sav'), 'rb') #todo check if this works
+        shap_model = pickle.load(open('shap.sav'), 'rb')
     except:
         shap_model = shap.TreeExplainer(model)
-        pickle.dump(shap_model, open('shap.sav', 'wb')) #todo check if this works
+        pickle.dump(shap_model, open('shap.sav', 'wb'))
     return shap_model
 
 def get_shap_values(shap_explainer, features):
@@ -65,9 +54,10 @@ def get_shap_values(shap_explainer, features):
         pickle.dump(shap_values_all, open('shap.pikl', 'wb'))
     return shap_values_all
 
-def calculate_shap_value(explainer, data):
+def calculate_shap_value(explainer, input_values):
     """"this function is for calculating a single shap value"""
-    shapvalue = explainer.shap_values(data)
+    input_instance = np.array(input_values[0])
+    shapvalue = explainer.shap_values(input_instance)
     return shapvalue
 
 def shap_summary_plot(shap_values, features):
@@ -75,19 +65,24 @@ def shap_summary_plot(shap_values, features):
     plt.savefig('shap_summary.png')
 
 class OG_explainer():
-    def __init__(self, explainer, shap_values, data):
+    def __init__(self, explainer, shap_values, data, featurenames=None):
         self.base_values = explainer.expected_value.mean()
         self.data = data
         self.values = shap_values
         if type(data) == pd.core.series.Series:
             self.feature_names = data._index
-        else: #assuming it is a dataframe
-            self.feature_names = data.columns
+        # elif type(data) == pd.core.series.DataFrame: #assuming it is a dataframe
+        #     self.feature_names = data.columns
+        else:
+            self.feature_names = featurenames
 
-def shap_waterfall_plot(explainer, shap_values, data):
-    thing = OG_explainer(explainer, shap_values[0], data)
-    shap.plots.waterfall(thing)
+def shap_waterfall_plot(explainer, shap_values, data, featurenames):
+    inputvalues = np.array(data[0])
+    thing = OG_explainer(explainer, shap_values[0], inputvalues, featurenames)
+    shap.plots.waterfall(thing, show=False)
+    plt.gcf().set_size_inches(30, 10)
     plt.savefig('shap_waterfall.png')
-
+    plt.clf()
+    print('shap explained')
 
 
