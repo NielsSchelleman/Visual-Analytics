@@ -13,8 +13,6 @@ import Lime_shap
 import base64
 
 
-
-
 def get_model():
     try:
         model = pickle.load(open('rf_mod.sav', 'rb'))
@@ -139,37 +137,6 @@ def plot_Lime(inputvalues):
     encoded_image = base64.b64encode(open('lime_explain.jpg', 'rb').read()).decode('ascii')
     return html.Img(id='limeimage',src='data:image/png;base64,{}'.format(encoded_image))
 
-
-def plot_Shap(inputvalues):
-    """returns the object of an image of a shap waterfall plot"""
-    shap_model = Lime_shap.get_shap_model(model)  # model is taken from outside the function
-    shapvalue = Lime_shap.calculate_shap_value(shap_model, inputvalues)
-    Lime_shap.shap_waterfall_plot(shap_model, shapvalue, inputvalues, column_names)  # column_names is taken from outside the function
-    encoded_image = base64.b64encode(open('shap_waterfall.png', 'rb').read()).decode('ascii')
-    return html.Img(id='shapimage',src='data:image/png;base64,{}'.format(encoded_image))
-
-def plot_Shap_Summary():
-    try:  # if the image already exists
-        encoded_image = base64.b64encode(open('shap_summary.png', 'rb').read()).decode('ascii')
-        #return html.Img(src='data:image/png;base64,{}'.format(encoded_image))
-        return encoded_image
-    except:  # otherwise we first create it
-        features_ = features.drop('RiskPerformance', axis=1)
-        shap_model = Lime_shap.get_shap_model(model)  # model is taken from outside the function
-        shap_values = Lime_shap.get_shap_values(shap_model, features_)  # features is taken from outside the function
-        Lime_shap.shap_summary_plot(shap_values, features_)# features is taken from outside the function
-        encoded_image = base64.b64encode(open('shap_summary.png', 'rb').read()).decode('ascii')
-        #return html.Img(id='shapsummary', src='data:image/png;base64,{}'.format(encoded_image))
-        return encoded_image
-
-def plot_Lime(inputvalues):
-    """returns the object of an image of a lime explainer plot"""
-    lime_model = Lime_shap.get_lime_model(features) # features is taken from outside the function
-    Lime_shap.lime_explain(lime_model, model, inputvalues)
-    encoded_image = base64.b64encode(open('lime_explain.jpg', 'rb').read()).decode('ascii')
-    return html.Img(id='limeimage',src='data:image/png;base64,{}'.format(encoded_image))
-
-
 def plot_Shap(inputvalues):
     """returns the object of an image of a shap waterfall plot"""
     shap_model = Lime_shap.get_shap_model(model)  # model is taken from outside the function
@@ -218,7 +185,6 @@ def plot_most_similar(current,  same_group=False):
         fig.update_yaxes(range=[0, maxi])
     return dcc.Graph(figure=fig, style={'width': '1000px', 'display': 'inline-block'})
 
-
 def plot_heatmaps(counts, data, ranges):
     axes = list(combinations(counts, 2))
     heatmaps = []
@@ -239,7 +205,6 @@ def plot_heatmaps(counts, data, ranges):
         heatmaps.append(dcc.Graph(figure=fig))
     return heatmaps
 
-
 def prep_lda(features):
     X = features.drop('RiskPerformance', axis=1)
     y = features['RiskPerformance']
@@ -253,7 +218,6 @@ def prep_lda(features):
     comp_df['size'] = 1
     comp_df['labels'] = y2
     return comp_df, lda, dims
-
 
 def CI(values, prediction, model):
     map = {'Good': 1, 'Bad': 0}
@@ -274,7 +238,6 @@ def CI(values, prediction, model):
     ci = proportion_confint(count, len(same_classfied))
     ci = (round(ci[0], 3), round(ci[1], 3))
     return ci
-
 
 def plot_correlations():
     X = features.drop('RiskPerformance', axis=1).corr()
