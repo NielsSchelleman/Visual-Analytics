@@ -31,15 +31,19 @@ def lime_explain(limemodel, model, input_values):
         data_row=input_instance,
         predict_fn=model.predict_proba
     )
-    lime_exp.as_pyplot_figure().savefig('lime_explain.jpg')
+    limeplot = lime_exp.as_pyplot_figure()
+    print('test')
+    limeplot.subplots_adjust(left=0.15)
+    limeplot.set_size_inches(23, 10)
+    limeplot.savefig('lime_explain.jpg')
     print('lime explained')
 
 def get_shap_model(model):
     try:
-        shap_model = pickle.load(open('shap.sav'), 'rb') #todo check if this works
+        shap_model = pickle.load(open('shap.sav'), 'rb')
     except:
         shap_model = shap.TreeExplainer(model)
-        pickle.dump(shap_model, open('shap.sav', 'wb')) #todo check if this works
+        pickle.dump(shap_model, open('shap.sav', 'wb'))
     return shap_model
 
 def get_shap_values(shap_explainer, features):
@@ -53,8 +57,8 @@ def get_shap_values(shap_explainer, features):
 def calculate_shap_value(explainer, input_values):
     """"this function is for calculating a single shap value"""
     input_instance = np.array(input_values[0])
+    print(input_instance)
     shapvalue = explainer.shap_values(input_instance)
-    print('shap value calculated')
     return shapvalue
 
 def shap_summary_plot(shap_values, features):
@@ -62,18 +66,23 @@ def shap_summary_plot(shap_values, features):
     plt.savefig('shap_summary.png')
 
 class OG_explainer():
-    def __init__(self, explainer, shap_values, data):
+    def __init__(self, explainer, shap_values, data, featurenames=None):
         self.base_values = explainer.expected_value.mean()
         self.data = data
         self.values = shap_values
         if type(data) == pd.core.series.Series:
             self.feature_names = data._index
-        else: #assuming it is a dataframe
-            self.feature_names = data.columns
+        # elif type(data) == pd.core.series.DataFrame: #assuming it is a dataframe
+        #     self.feature_names = data.columns
+        else:
+            self.feature_names = featurenames
 
-def shap_waterfall_plot(explainer, shap_values, data):
-    thing = OG_explainer(explainer, shap_values[0], data)
-    shap.plots.waterfall(thing)
+def shap_waterfall_plot(explainer, shap_values, data, featurenames):
+    inputvalues = np.array(data[0])
+    thing = OG_explainer(explainer, shap_values[0], inputvalues, featurenames)
+    shap.plots.waterfall(thing, show=False)
+    plt.gcf().set_size_inches(30, 10)
     plt.savefig('shap_waterfall.png')
     print('shap explained')
+
 

@@ -135,15 +135,15 @@ def plot_Lime(inputvalues):
     lime_model = Lime_shap.get_lime_model(features) # features is taken from outside the function
     Lime_shap.lime_explain(lime_model, model, inputvalues)
     encoded_image = base64.b64encode(open('lime_explain.jpg', 'rb').read()).decode('ascii')
-    return html.Img(src='data:image/png;base64,{}'.format(encoded_image))
+    return html.Img(id='limeimage',src='data:image/png;base64,{}'.format(encoded_image))
 
 def plot_Shap(inputvalues):
     """returns the object of an image of a shap waterfall plot"""
-    shap_model = Lime_shap.get_shap_model(model) # model is taken from outside the function
+    shap_model = Lime_shap.get_shap_model(model)  # model is taken from outside the function
     shapvalue = Lime_shap.calculate_shap_value(shap_model, inputvalues)
-    Lime_shap.shap_waterfall_plot(shap_model, shapvalue, features) # features is taken from outside the function
+    Lime_shap.shap_waterfall_plot(shap_model, shapvalue, inputvalues, column_names)  # column_names is taken from outside the function
     encoded_image = base64.b64encode(open('shap_waterfall.png', 'rb').read()).decode('ascii')
-    return html.Img(src='data:image/png;base64,{}'.format(encoded_image))
+    return html.Img(id='shapimage',src='data:image/png;base64,{}'.format(encoded_image))
 
 def plot_Shap_Summary():
     try:  # if the image already exists
