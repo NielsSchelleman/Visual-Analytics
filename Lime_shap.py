@@ -36,6 +36,7 @@ def lime_explain(limemodel, model, input_values):
     limeplot.subplots_adjust(left=0.15)
     limeplot.set_size_inches(23, 10)
     limeplot.savefig('lime_explain.jpg')
+    plt.clf()
     print('lime explained')
 
 def get_shap_model(model):
@@ -83,6 +84,7 @@ def shap_waterfall_plot(explainer, shap_values, data, featurenames):
     shap.plots.waterfall(thing, show=False)
     plt.gcf().set_size_inches(30, 10)
     plt.savefig('shap_waterfall.png')
+    plt.clf()
     print('shap explained')
 
 
