@@ -363,9 +363,8 @@ if __name__ == '__main__':
 
         html.Div(id='percentages',style={'width': '160px', 'display': 'inline-block'}),
 
-        #html.Div(children=plot_Shap_Summary(), style={'display': 'inline-block', 'width': '625px'}),
         html.Img(id='shapsum', src='data:image/png;base64,{}'.format(plot_Shap_Summary()),
-                 style={'width':'625px','margin-left':'100px'}),
+                 style={'width':'625px','margin-left':'100px', 'margin-top':'-490px'}),
 
         html.Div(id='current_eval'),
         html.Div(id='in-between-counterexample', style={'display': 'none'}),
