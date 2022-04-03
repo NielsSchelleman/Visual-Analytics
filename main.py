@@ -150,11 +150,12 @@ def plot_Shap_Summary():
         encoded_image = base64.b64encode(open('shap_summary.png', 'rb').read()).decode('ascii')
         return html.Img(src='data:image/png;base64,{}'.format(encoded_image))
     except:  # otherwise we first create it
+        features_ = features.drop('RiskPerformance', axis=1)
         shap_model = Lime_shap.get_shap_model(model)  # model is taken from outside the function
-        shap_values = Lime_shap.get_shap_values(shap_model, features)  # features is taken from outside the function
-        Lime_shap.shap_summary_plot(shap_values, features)# features is taken from outside the function
+        shap_values = Lime_shap.get_shap_values(shap_model, features_)  # features is taken from outside the function
+        Lime_shap.shap_summary_plot(shap_values, features_)# features is taken from outside the function
         encoded_image = base64.b64encode(open('shap_summary.png', 'rb').read()).decode('ascii')
-        return html.Img(src='data:image/png;base64,{}'.format(encoded_image))
+        return html.Img(id='shapsummary', src='data:image/png;base64,{}'.format(encoded_image))
 
 def plot_most_similar(current,  same_group=False):
     columns = list(features.columns)
@@ -303,8 +304,8 @@ if __name__ == '__main__':
     app = Dash(__name__)
     #app.css.append_css({'external_url': 'resetstyle.css'})
     app.layout = html.Div([
-        html.Div(id='topbar',children=[
-            html.P(id='info',children="Please first enter the client's data  |"),
+        html.Div(id='topbar', children=[
+            html.P(id='info', children="Please first enter the client's data  |"),
             html.Div(id='toptext')
             ]),
 
@@ -312,7 +313,7 @@ if __name__ == '__main__':
         html.Div([
                 dcc.Checklist(options=rangeSearchChecklist(),
                               id='rangeSearchChecklist',
-                              inputStyle={'display':'none'},
+                              inputStyle={'display': 'none'},
                               labelStyle={'display': 'block', 'height': '22px', 'width': '300px'})],
                  style={'width': '300px', 'display': 'inline-block'}),
 
@@ -327,6 +328,7 @@ if __name__ == '__main__':
 
         html.Div(id='percentages',style={'width': '160px', 'display': 'inline-block'}),
 
+        html.Div(children=plot_Shap_Summary(), style={'display': 'inline-block', 'width': '625px'}),
 
 
         html.Div(id='current_eval'),
