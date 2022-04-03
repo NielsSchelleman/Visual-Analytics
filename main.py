@@ -1,6 +1,7 @@
 import dash
 import pandas as pd
-from dash import Dash, html, dcc, Input, Output, exceptions
+from dash import Dash, html, dcc, Input, Output, exceptions, State
+import dash_bootstrap_components as dbc
 import numpy as np
 from itertools import combinations
 import plotly.graph_objects as go
@@ -10,6 +11,8 @@ import plotly.express as px
 from statsmodels.stats.proportion import proportion_confint
 import Lime_shap
 import base64
+
+
 
 
 def get_model():
@@ -129,6 +132,35 @@ def create_grid(current, ranges, checklist):
     grid = np.array(np.meshgrid(*gridbase, indexing='ij'))
     return pd.DataFrame(grid.reshape(grid.shape[0], -1).T), counts
 
+def plot_Lime(inputvalues):
+    """returns the object of an image of a lime explainer plot"""
+    lime_model = Lime_shap.get_lime_model(features) # features is taken from outside the function
+    Lime_shap.lime_explain(lime_model, model, inputvalues)
+    encoded_image = base64.b64encode(open('lime_explain.jpg', 'rb').read()).decode('ascii')
+    return html.Img(id='limeimage',src='data:image/png;base64,{}'.format(encoded_image))
+
+
+def plot_Shap(inputvalues):
+    """returns the object of an image of a shap waterfall plot"""
+    shap_model = Lime_shap.get_shap_model(model)  # model is taken from outside the function
+    shapvalue = Lime_shap.calculate_shap_value(shap_model, inputvalues)
+    Lime_shap.shap_waterfall_plot(shap_model, shapvalue, inputvalues, column_names)  # column_names is taken from outside the function
+    encoded_image = base64.b64encode(open('shap_waterfall.png', 'rb').read()).decode('ascii')
+    return html.Img(id='shapimage',src='data:image/png;base64,{}'.format(encoded_image))
+
+def plot_Shap_Summary():
+    try:  # if the image already exists
+        encoded_image = base64.b64encode(open('shap_summary.png', 'rb').read()).decode('ascii')
+        #return html.Img(src='data:image/png;base64,{}'.format(encoded_image))
+        return encoded_image
+    except:  # otherwise we first create it
+        features_ = features.drop('RiskPerformance', axis=1)
+        shap_model = Lime_shap.get_shap_model(model)  # model is taken from outside the function
+        shap_values = Lime_shap.get_shap_values(shap_model, features_)  # features is taken from outside the function
+        Lime_shap.shap_summary_plot(shap_values, features_)# features is taken from outside the function
+        encoded_image = base64.b64encode(open('shap_summary.png', 'rb').read()).decode('ascii')
+        #return html.Img(id='shapsummary', src='data:image/png;base64,{}'.format(encoded_image))
+        return encoded_image
 
 def plot_Lime(inputvalues):
     """returns the object of an image of a lime explainer plot"""
@@ -304,7 +336,7 @@ if __name__ == '__main__':
                            'PEIT', 'MRI7', 'NIL6', 'I6E7', 'NFRB', 'NFIB', 'RTWB', 'ITWB', 'TWHU', 'PTWB']
     percentage_ids = list(column_names)
 
-    app = Dash(__name__)
+    app = Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
     #app.css.append_css({'external_url': 'resetstyle.css'})
     app.layout = html.Div([
         html.Div(id='topbar', children=[
@@ -342,18 +374,96 @@ if __name__ == '__main__':
             html.Div(id='global', children=[
                 html.P(id='global_text', children='global explainers'),
                 html.Button('Show Interactive LDA', id='button_LDA', n_clicks=0, style={'margin-right': '3px'}),
+                html.Button('?', id='Q_lda', n_clicks=0,
+                            style={'margin-right': '3px', 'border-radius': '50%', "font-weight": "bold"}),
                 html.Button('Correlation Matrix', id='button_corr', n_clicks=0, style={'margin-right': '3px'}),
+                html.Button('?', id='Q_corr', n_clicks=0,
+                            style={'margin-right': '3px', 'border-radius': '50%', "font-weight": "bold"}),
                 dcc.Dropdown(rangeSearchChecklist(), placeholder="See feature distribution",
                              id='dd_vals',style={'margin-right':'3px','display':'inline-block', 'width':'350px',
-                                                 'height':'30px','margin-bottom':'-10px','color':'#000000'})
+                                                 'height':'30px','margin-bottom':'-10px','color':'#000000'}),
+            html.Button('?', id='Q_feature', n_clicks=0,
+                            style={'margin-right': '3px', 'border-radius': '50%', "font-weight": "bold"}),
+                dbc.Modal(
+                    [
+                        dbc.ModalHeader(dbc.ModalTitle("Linear Discriminant Analysis")),
+                        dbc.ModalBody("LDA modal"),
+                    ],
+                    id="A_LDA",
+                    size="sm",
+                    is_open=False
+                ),
+
+                dbc.Modal(
+                    [
+                        dbc.ModalHeader(dbc.ModalTitle("Plot Correlations")),
+                        dbc.ModalBody("Correlations modal"),
+                    ],
+                    id="A_corr",
+                    size="sm",
+                    is_open=False
+                ),
+                dbc.Modal(
+                    [
+                        dbc.ModalHeader(dbc.ModalTitle("Plot Feature Distribution")),
+                        dbc.ModalBody("Feature distribution modal"),
+                    ],
+                    id="A_feature",
+                    size="sm",
+                    is_open=False
+                )
             ]),
             html.Div(id='local', children=[
                 html.P(id='local_text', children='local explainers'),
                 html.Button('Run Grid Search', id='button_counterexample_run', n_clicks=0,
                             style={'margin-right': '3px'}),
+                html.Button('?', id='Q_grid', n_clicks=0,
+                            style={'margin-right': '3px', 'border-radius': '50%', "font-weight": "bold"}),
                 html.Button('Perform LIME', id='button_LIME', n_clicks=0, style={'margin-right': '3px'}),
+                html.Button('?', id='Q_lime', n_clicks=0,
+                            style={'margin-right': '3px', 'border-radius': '50%', "font-weight": "bold"}),
                 html.Button('Perform SHAP', id='button_SHAP', n_clicks=0, style={'margin-right': '3px'}),
-                html.Button('Most Similar', id='button_sim', n_clicks=0, style={'margin-right': '3px'})
+                html.Button('?', id='Q_shap', n_clicks=0,
+                            style={'margin-right': '3px', 'border-radius': '50%', "font-weight": "bold"}),
+                html.Button('Most Similar', id='button_sim', n_clicks=0, style={'margin-right': '3px'}),
+                html.Button('?', id='Q_sim', n_clicks=0,
+                            style={'margin-right': '3px', 'border-radius': '50%', "font-weight": "bold"}),
+                dbc.Modal(
+                    [
+                        dbc.ModalHeader(dbc.ModalTitle("Grid Search")),
+                        dbc.ModalBody("Grid search modal"),
+                    ],
+                    id="A_grid",
+                    size="sm",
+                    is_open=False
+                ),
+                dbc.Modal(
+                    [
+                        dbc.ModalHeader(dbc.ModalTitle("Lime")),
+                        dbc.ModalBody("Lime modal"),
+                    ],
+                    id="A_lime",
+                    size="sm",
+                    is_open=False
+                ),
+                dbc.Modal(
+                    [
+                        dbc.ModalHeader(dbc.ModalTitle("Shap")),
+                        dbc.ModalBody("Shap modal"),
+                    ],
+                    id="A_shap",
+                    size="sm",
+                    is_open=False
+                ),
+                dbc.Modal(
+                    [
+                        dbc.ModalHeader(dbc.ModalTitle("Similar")),
+                        dbc.ModalBody("Similarity modal"),
+                    ],
+                    id="A_sim",
+                    size="sm",
+                    is_open=False
+                ),
             ])
 
         ], style={'width': '100%', 'display': 'block', 'padding-top': '5px', 'padding-bottom': '10px'}),
@@ -639,5 +749,75 @@ if __name__ == '__main__':
                 curr_plot = plot
 
         return curr_tally, curr_plot
+
+
+    @app.callback(
+        Output("A_LDA", "is_open"),
+        Input("Q_lda", "n_clicks"),
+        State("A_LDA", "is_open"),
+    )
+    def toggle_modal(n1, is_open):
+        if n1:
+            return not is_open
+        return is_open
+    @app.callback(
+        Output("A_corr", "is_open"),
+        Input("Q_corr", "n_clicks"),
+        State("A_corr", "is_open"),
+    )
+    def toggle_modal(n1, is_open):
+        if n1:
+            return not is_open
+        return is_open
+
+    @app.callback(
+        Output("A_feature", "is_open"),
+        Input("Q_feature", "n_clicks"),
+        State("A_feature", "is_open"),
+    )
+    def toggle_modal(n1, is_open):
+        if n1:
+            return not is_open
+        return is_open
+
+    @app.callback(
+        Output("A_grid", "is_open"),
+        Input("Q_grid", "n_clicks"),
+        State("A_grid", "is_open"),
+    )
+    def toggle_modal(n1, is_open):
+        if n1:
+            return not is_open
+        return is_open
+
+    @app.callback(
+        Output("A_lime", "is_open"),
+        Input("Q_lime", "n_clicks"),
+        State("A_lime", "is_open"),
+    )
+    def toggle_modal(n1, is_open):
+        if n1:
+            return not is_open
+        return is_open
+
+    @app.callback(
+        Output("A_shap", "is_open"),
+        Input("Q_shap", "n_clicks"),
+        State("A_shap", "is_open"),
+    )
+    def toggle_modal(n1, is_open):
+        if n1:
+            return not is_open
+        return is_open
+
+    @app.callback(
+        Output("A_sim", "is_open"),
+        Input("Q_sim", "n_clicks"),
+        State("A_sim", "is_open"),
+    )
+    def toggle_modal(n1, is_open):
+        if n1:
+            return not is_open
+        return is_open
 
     app.run_server(debug=True)
