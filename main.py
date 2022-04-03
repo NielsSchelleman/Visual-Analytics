@@ -272,9 +272,13 @@ if __name__ == '__main__':
     percentage_ids = list(column_names)
 
     app = Dash(__name__)
-
+    #app.css.append_css({'external_url': 'resetstyle.css'})
     app.layout = html.Div([
-        html.Div(id='toptext'),
+        html.Div(id='topbar',children=[
+            html.P(id='info',children="Please first enter the client's data  |"),
+            html.Div(id='toptext')
+            ]),
+
 
         html.Div([
                 dcc.Checklist(options=rangeSearchChecklist(),
@@ -293,20 +297,23 @@ if __name__ == '__main__':
 
 
         html.Div(id='percentages',style={'width': '160px', 'display': 'inline-block'}),
+
+
+
         html.Div(id='current_eval'),
         html.Div(id='in-between-counterexample',style={'display':'none'}),
 
         html.Div(id='searchbar', children=[
             html.Div(id='global',children=[
-                html.P('global explainers'),
+                html.P(id='global_text', children='global explainers'),
                 html.Button('Show Interactive LDA', id='button_LDA', n_clicks=0, style={'margin-right': '3px'}),
                 html.Button('Correlation Matrix', id='button_corr', n_clicks=0, style={'margin-right': '3px'}),
                 dcc.Dropdown(rangeSearchChecklist(), placeholder="See feature distribution",
                              id='dd_vals',style={'margin-right':'3px','display':'inline-block', 'width':'350px',
-                                                 'height':'30px','margin-bottom':'-10px'})
+                                                 'height':'30px','margin-bottom':'-10px','color':'#000000'})
             ]),
             html.Div(id='local', children=[
-                html.P('local explainers'),
+                html.P(id='local_text', children='local explainers'),
                 html.Button('Run Grid Search', id='button_counterexample_run', n_clicks=0,
                             style={'margin-right': '3px'}),
                 html.Button('Perform LIME', id='button_LIME', n_clicks=0, style={'margin-right': '3px'}),
@@ -314,8 +321,7 @@ if __name__ == '__main__':
                 html.Button('Most Similar', id='button_sim', n_clicks=0, style={'margin-right': '3px'})
             ])
 
-        ], style={'width': '90%', 'display': 'block', 'background-color': '#e9e9ed', 'padding': '10px',
-                  'border-radius': '5px'}),
+        ], style={'width': '100%', 'display': 'block', 'padding-top': '5px', 'padding-bottom': '10px'}),
 
         # store information of current client
         dcc.Store(id='store_person'),
@@ -343,6 +349,15 @@ if __name__ == '__main__':
 
     ])
     # callbacks_rangesearch.
+
+    @app.callback(
+        Output('current_eval', 'children'),
+        Input('store_person', 'data'),
+    )
+    def GetPersonEval(current):
+        prediction = model.predict(current)
+        ci = CI(current, prediction, model)
+        return f'Output: {prediction} with 95% confidence interval: {ci}'
 
 
     @app.callback(
@@ -399,7 +414,6 @@ if __name__ == '__main__':
 
 
     @app.callback(
-        Output(component_id='current_eval', component_property='children'),
         Output('heatmaps_plt','data'),
         Output('rangeSearchChecklist', 'inputStyle'),
         Output('button_counterexample_run', 'style'),
@@ -415,8 +429,7 @@ if __name__ == '__main__':
     )
     def counterExampleSearch(current, button, checklist, children, tally, ):
         if button == 1:
-            return ' ',\
-                   [0, tally],\
+            return [0, tally],\
                    {'display': 'inline-block'},\
                    {'background-color': 'yellow', 'margin-right': '3px'},\
                    'select columns', \
@@ -433,7 +446,7 @@ if __name__ == '__main__':
 
 
             if len(checklist) > 5 or len(checklist) < 2:
-                return f'Output: {prediction}', [0, tally], {'display':'none'}, \
+                return [0, tally], {'display':'none'}, \
                        {'background-color': '#e9e9ed', 'margin-right': '3px'}, 'Run Grid Search', dash.no_update, [], []
 
             #Get all percentage ranges
@@ -463,7 +476,7 @@ if __name__ == '__main__':
             # find all axes for the plot
 
             heatmaps = plot_heatmaps(counts, newdata, ranges)
-            return f'Output: {prediction} with 95% confidence interval: {ci}', [html.Div(heatmaps), tally+1], {'display': 'none'}, \
+            return [html.Div(heatmaps), tally+1], {'display': 'none'}, \
                    {'background-color': '#e9e9ed', 'margin-right': '3px'}, 'Run Grid Search', 0, [], []
 
     @app.callback(
