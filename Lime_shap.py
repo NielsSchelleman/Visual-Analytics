@@ -32,7 +32,6 @@ def lime_explain(limemodel, model, input_values):
         predict_fn=model.predict_proba
     )
     limeplot = lime_exp.as_pyplot_figure()
-    print('test')
     limeplot.subplots_adjust(left=0.15)
     limeplot.set_size_inches(23, 10)
     limeplot.savefig('lime_explain.jpg')
@@ -58,7 +57,6 @@ def get_shap_values(shap_explainer, features):
 def calculate_shap_value(explainer, input_values):
     """"this function is for calculating a single shap value"""
     input_instance = np.array(input_values[0])
-    print(input_instance)
     shapvalue = explainer.shap_values(input_instance)
     return shapvalue
 
