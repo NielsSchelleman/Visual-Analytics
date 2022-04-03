@@ -12,7 +12,6 @@ from statsmodels.stats.proportion import proportion_confint
 import Lime_shap
 import base64
 
-
 def get_model():
     try:
         model = pickle.load(open('rf_mod.sav', 'rb'))
