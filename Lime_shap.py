@@ -6,29 +6,14 @@ import shap
 import matplotlib.pyplot as plt
 
 
-def get_model():
-    try:
-        model = pickle.load(open('rf_mod.sav', 'rb'))
-    except:
-        from Model import buildModel
-
-        # load in the dataset
-        features = pd.read_csv('heloc_dataset_v1.csv')
-
-        # the columns that stores the labels
-        labelDimension = "RiskPerformance"
-
-        # build a random forest classifier
-        model = buildModel(features, labelDimension)
-
-        pickle.dump(model, open('rf_mod.sav', 'wb')) #todo check if this works
-    return model
-
 def get_lime_model(data):
     try:
-        lime_explainer = pickle.load(open('lime.sav', 'rb')) #todo check if this works
+        lime_explainer = pickle.load(open('lime.sav', 'rb'))
     except:
-        features = data.drop(['RiskPerformance'], axis=1)
+        try:
+            features = data.drop(['RiskPerformance'], axis=1)
+        except:
+            features = data
         # y_lime = features['RiskPerformance']
 
         lime_explainer = lime_tabular.LimeTabularExplainer(
@@ -36,17 +21,18 @@ def get_lime_model(data):
             feature_names=features.columns,
             class_names=['Bad', 'Good'],
             mode='classification')
-        pickle.dump(lime_explainer, open('lime.sav', 'wb') ) # todo check if this works
+        # pickle.dump(lime_explainer, open('lime.sav', 'wb') )
     return lime_explainer
 
-def lime_explain(model, input_instance):
-    lime_exp = model.explain_instance(
+def lime_explain(limemodel, model, input_values):
+    input_instance = np.array(input_values[0])
+    lime_exp = limemodel.explain_instance(
         num_features=30,
         data_row=input_instance,
         predict_fn=model.predict_proba
     )
-    lime_exp.save_to_file('lime_explain.html',show_table=True)
-    lime_exp.as_pyplot_figure().savefig('lime_explain.png')
+    lime_exp.as_pyplot_figure().savefig('lime_explain.jpg')
+    print('lime explained')
 
 def get_shap_model(model):
     try:
@@ -64,9 +50,11 @@ def get_shap_values(shap_explainer, features):
         pickle.dump(shap_values_all, open('shap.pikl', 'wb'))
     return shap_values_all
 
-def calculate_shap_value(explainer, data):
+def calculate_shap_value(explainer, input_values):
     """"this function is for calculating a single shap value"""
-    shapvalue = explainer.shap_values(data)
+    input_instance = np.array(input_values[0])
+    shapvalue = explainer.shap_values(input_instance)
+    print('shap value calculated')
     return shapvalue
 
 def shap_summary_plot(shap_values, features):
@@ -87,6 +75,5 @@ def shap_waterfall_plot(explainer, shap_values, data):
     thing = OG_explainer(explainer, shap_values[0], data)
     shap.plots.waterfall(thing)
     plt.savefig('shap_waterfall.png')
-
-
+    print('shap explained')
 

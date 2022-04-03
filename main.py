@@ -9,8 +9,27 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 import plotly.express as px
 from statsmodels.stats.proportion import proportion_confint
 import Lime_shap
+import base64
 
 
+def get_model():
+    try:
+        model = pickle.load(open('rf_mod.sav', 'rb'))
+    except:
+        print("the file for the model wasn't found, so it is being built now" )
+        from Model import buildModel
+
+        # load in the dataset
+        features = pd.read_csv('heloc_dataset_v1.csv')
+
+        # the columns that stores the labels
+        labelDimension = "RiskPerformance"
+
+        # build a random forest classifier
+        model = buildModel(features, labelDimension)
+
+        pickle.dump(model, open('rf_mod.sav', 'wb'))
+    return model
 
 def getRanges(percentages, current_vals):
     # Indices of chosen variables
@@ -98,8 +117,6 @@ def rangeSearchChecklist():
             "NumBank/NatlTradesWHighUtilization",
             "PercentTradesWBalance"]
 
-
-
 def create_grid(current, ranges, checklist):
     gridbase = []
     counts = []
@@ -116,16 +133,28 @@ def create_grid(current, ranges, checklist):
 def plot_Lime(inputvalues):
     """returns the object of an image of a lime explainer plot"""
     lime_model = Lime_shap.get_lime_model(features) # features is taken from outside the function
-    Lime_shap.lime_explain(lime_model, inputvalues)
-    return html.Img(id='lime_explain.png')
+    Lime_shap.lime_explain(lime_model, model, inputvalues)
+    encoded_image = base64.b64encode(open('lime_explain.jpg', 'rb').read()).decode('ascii')
+    return html.Img(src='data:image/png;base64,{}'.format(encoded_image))
 
 def plot_Shap(inputvalues):
     """returns the object of an image of a shap waterfall plot"""
     shap_model = Lime_shap.get_shap_model(model) # model is taken from outside the function
     shapvalue = Lime_shap.calculate_shap_value(shap_model, inputvalues)
     Lime_shap.shap_waterfall_plot(shap_model, shapvalue, features) # features is taken from outside the function
-    return html.Img(id='shap_waterfall.png')
+    encoded_image = base64.b64encode(open('shap_waterfall.png', 'rb').read()).decode('ascii')
+    return html.Img(src='data:image/png;base64,{}'.format(encoded_image))
 
+def plot_Shap_Summary():
+    try:  # if the image already exists
+        encoded_image = base64.b64encode(open('shap_summary.png', 'rb').read()).decode('ascii')
+        return html.Img(src='data:image/png;base64,{}'.format(encoded_image))
+    except:  # otherwise we first create it
+        shap_model = Lime_shap.get_shap_model(model)  # model is taken from outside the function
+        shap_values = Lime_shap.get_shap_values(shap_model, features)  # features is taken from outside the function
+        Lime_shap.shap_summary_plot(shap_values, features)# features is taken from outside the function
+        encoded_image = base64.b64encode(open('shap_summary.png', 'rb').read()).decode('ascii')
+        return html.Img(src='data:image/png;base64,{}'.format(encoded_image))
 
 def plot_most_similar(current,  same_group=False):
     columns = list(features.columns)
@@ -257,7 +286,7 @@ if __name__ == '__main__':
     # the columns that stores the labels
     labelDimension = "RiskPerformance"
     # build a random forest classifier
-    model = pickle.load(open('rf_mod.sav', 'rb'))
+    model = get_model()
     margedict = {'margin-top': '3px'}
 
     ldfa_df, lda_model, lda_dims = prep_lda(features)
@@ -301,10 +330,10 @@ if __name__ == '__main__':
 
 
         html.Div(id='current_eval'),
-        html.Div(id='in-between-counterexample',style={'display':'none'}),
+        html.Div(id='in-between-counterexample', style={'display': 'none'}),
 
         html.Div(id='searchbar', children=[
-            html.Div(id='global',children=[
+            html.Div(id='global', children=[
                 html.P(id='global_text', children='global explainers'),
                 html.Button('Show Interactive LDA', id='button_LDA', n_clicks=0, style={'margin-right': '3px'}),
                 html.Button('Correlation Matrix', id='button_corr', n_clicks=0, style={'margin-right': '3px'}),

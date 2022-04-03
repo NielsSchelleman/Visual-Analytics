@@ -18,7 +18,7 @@ def buildModel(features, labelDimension) :
     labels = np.array(features[labelDimension])
     # Remove the labels from the features
     # axis 1 refers to the columns
-    features= features.drop(labelDimension, axis = 1)
+    features = features.drop(labelDimension, axis = 1)
 
     # Convert to numpy array
     features = np.array(features)
