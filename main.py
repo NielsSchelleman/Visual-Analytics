@@ -297,6 +297,9 @@ if __name__ == '__main__':
 
 
         html.Div(id='percentages',style={'width': '160px', 'display': 'inline-block'}),
+
+
+
         html.Div(id='current_eval'),
         html.Div(id='in-between-counterexample',style={'display':'none'}),
 
@@ -307,7 +310,7 @@ if __name__ == '__main__':
                 html.Button('Correlation Matrix', id='button_corr', n_clicks=0, style={'margin-right': '3px'}),
                 dcc.Dropdown(rangeSearchChecklist(), placeholder="See feature distribution",
                              id='dd_vals',style={'margin-right':'3px','display':'inline-block', 'width':'350px',
-                                                 'height':'30px','margin-bottom':'-10px'})
+                                                 'height':'30px','margin-bottom':'-10px','color':'#000000'})
             ]),
             html.Div(id='local', children=[
                 html.P(id='local_text', children='local explainers'),
