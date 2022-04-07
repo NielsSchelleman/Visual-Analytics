@@ -11,6 +11,7 @@ import plotly.express as px
 from statsmodels.stats.proportion import proportion_confint
 import Lime_shap
 import base64
+from sklearn.preprocessing import StandardScaler
 
 def get_model():
     try:
@@ -66,6 +67,8 @@ def getRanges(percentages, current_vals):
             "PercentTradesWBalance": range(0, 100)}
     # Update ranges for selected variables
     for variable, value, percentage in zip(variable_list, current_vals, percentages):
+        max_range = ranges[variable][-1]
+        min_range = ranges[variable][0]
         # Only viable for valid observations
         if value > 0 and percentage > 0:
             # For now using initial ranges
@@ -76,6 +79,10 @@ def getRanges(percentages, current_vals):
             else: #Absolute values range search
                 min = value - int(percentage)
                 max = value + int(percentage)
+            if max > max_range:
+                max = max_range
+            elif min < min_range:
+                min = min_range
             ranges[variable] = range(int(min), int(max), int(stepsize))
         if value == 0 and percentage > 0:
             stepsize = np.round((ranges[variable][-1] - ranges[variable][0]) / len(ranges[variable]))
@@ -89,6 +96,10 @@ def getRanges(percentages, current_vals):
                 max = value + int(percentage)
                 if (max - min) % stepsize == 0:
                     max += 1
+            if max > max_range:
+                max = max_range
+            elif min < min_range:
+                min = min_range
             ranges[variable] = range(int(min), int(max), int(stepsize))
     return ranges
 
@@ -158,15 +169,19 @@ def plot_Shap_Summary():
         #return html.Img(id='shapsummary', src='data:image/png;base64,{}'.format(encoded_image))
         return encoded_image
 
-def plot_most_similar(current,  same_group=False):
+def plot_most_similar(current,  same_group=False, normalize=True):
     columns = list(features.columns)
+    current = np.array(current[0]).reshape(1,-1)
     #Select counter group
     if same_group:
         opposing_group = features[features['RiskPerformance'] == prediction[0]].reset_index(drop=True).drop('RiskPerformance', axis=1)
     else:
         opposing_group = features[features['RiskPerformance'] != 'Bad'].reset_index(drop=True).drop('RiskPerformance', axis=1)
-
-    dist = np.linalg.norm(opposing_group - current[0], axis=1)
+    if normalize:
+        scaler = StandardScaler()
+        opposing_group = pd.DataFrame(scaler.fit_transform(opposing_group))
+        current = scaler.transform(current)
+    dist = np.linalg.norm(opposing_group - current, axis=1)
     idx_min = np.argmin(dist)
     most_similar = list(opposing_group.loc[idx_min])
     fig = go.Figure(layout=dict(xaxis_title='Features', yaxis_title='Values', title='Comparison to most similar person in '
@@ -396,7 +411,8 @@ if __name__ == '__main__':
                 html.Button('Perform SHAP', id='button_SHAP', n_clicks=0, style={'margin-right': '3px'}),
                 html.Button('?', id='Q_shap', n_clicks=0,
                             style={'margin-right': '3px', 'border-radius': '50%', "font-weight": "bold"}),
-                html.Button('Most Similar', id='button_sim', n_clicks=0, style={'margin-right': '3px'}),
+                dcc.Dropdown(['Normalized', 'Standard'], placeholder = 'Most Similar', id='button_sim', style={'margin-right':'3px','display':'inline-block', 'width':'350px',
+                                                 'height':'30px','margin-bottom':'-10px','color':'#000000'}),
                 html.Button('?', id='Q_sim', n_clicks=0,
                             style={'margin-right': '3px', 'border-radius': '50%', "font-weight": "bold"}),
                 dbc.Modal(
@@ -674,14 +690,16 @@ if __name__ == '__main__':
 
     @app.callback(
         Output('sim_plt', 'data'),
-        Output('button_sim', 'n_clicks'),
+        Output('button_sim', 'value'),
         Input('store_person', 'data'),
-        Input('button_sim', 'n_clicks'),
+        Input('button_sim', 'value'),
         Input('tally', 'n_clicks'),
     )
     def plot_similar(person, button, tally):
-        if button == 0:
+        if not button:
             raise exceptions.PreventUpdate
+        if button != 'Normalized':
+            return [plot_most_similar(person, normalize=False), tally+1], 0
         return [plot_most_similar(person), tally+1], 0
 
     @app.callback(
