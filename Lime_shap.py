@@ -40,7 +40,7 @@ def lime_explain(limemodel, model, input_values):
 
 def get_shap_model(model):
     try:
-        shap_model = pickle.load(open('shap.sav'), 'rb')
+        shap_model = pickle.load(open('shap.sav', 'rb'))
     except:
         shap_model = shap.TreeExplainer(model)
         pickle.dump(shap_model, open('shap.sav', 'wb'))

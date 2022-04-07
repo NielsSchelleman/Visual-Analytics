@@ -171,8 +171,8 @@ def plot_most_similar(current,  same_group=False):
     most_similar = list(opposing_group.loc[idx_min])
     fig = go.Figure(layout=dict(xaxis_title='Features', yaxis_title='Values', title='Comparison to most similar person in '
                                                                                     'group with loan accepted'),
-    data=[go.Bar(name = 'Me', x=columns, y=current[0]),
-                        go.Bar(name='Other', x=columns, y=most_similar)])
+    data=[go.Bar(name = 'Me', x=opposing_group.columns, y=current[0]),
+                        go.Bar(name='Other', x=opposing_group.columns, y=most_similar)])
     fig.update_layout(barmode='group')
     mini = min(current[0])-1
     maxi = max(current[0])+1
