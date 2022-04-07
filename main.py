@@ -177,17 +177,23 @@ def plot_most_similar(current,  same_group=False, normalize=True):
         opposing_group = features[features['RiskPerformance'] == prediction[0]].reset_index(drop=True).drop('RiskPerformance', axis=1)
     else:
         opposing_group = features[features['RiskPerformance'] != 'Bad'].reset_index(drop=True).drop('RiskPerformance', axis=1)
-    if normalize:
-        scaler = StandardScaler()
-        opposing_group = pd.DataFrame(scaler.fit_transform(opposing_group))
-        current = scaler.transform(current)
+    scaler = StandardScaler()
+    opposing_group = pd.DataFrame(scaler.fit_transform(opposing_group))
+    current = scaler.transform(current)
     dist = np.linalg.norm(opposing_group - current, axis=1)
     idx_min = np.argmin(dist)
-    most_similar = list(opposing_group.loc[idx_min])
+    most_similar = np.array(opposing_group.loc[idx_min]).reshape(1, -1)
+
+    if not normalize:
+        #Show normalized values
+        current = scaler.inverse_transform(current)
+        most_similar = scaler.inverse_transform(most_similar)
+
+    #else show original values
     fig = go.Figure(layout=dict(xaxis_title='Features', yaxis_title='Values', title='Comparison to most similar person in '
                                                                                     'group with loan accepted'),
     data=[go.Bar(name = 'Me', x=opposing_group.columns, y=current[0]),
-                        go.Bar(name='Other', x=opposing_group.columns, y=most_similar)])
+                        go.Bar(name='Other', x=opposing_group.columns, y=most_similar[0])])
     fig.update_layout(barmode='group')
     mini = min(current[0])-1
     maxi = max(current[0])+1
