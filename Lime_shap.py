@@ -4,6 +4,8 @@ import numpy as np
 import pandas as pd
 import shap
 import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('Agg')
 
 
 def get_lime_model(data):
