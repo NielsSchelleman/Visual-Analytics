@@ -14,9 +14,10 @@ import base64
 from sklearn.preprocessing import StandardScaler
 
 def get_model():
-    try:
+    """"This function returns the random forest model that was given in the assignment"""
+    try:  # we try to load the model, rather than recreating it if it was already created before
         model = pickle.load(open('rf_mod.sav', 'rb'))
-    except:
+    except:  # we build the model, this is the code that was given to us with the assignment.
         print("the file for the model wasn't found, so it is being built now" )
         from Model import buildModel
 
