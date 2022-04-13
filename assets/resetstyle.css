@@ -31,16 +31,141 @@ body { margin: 0;
 		  color: rgb(255, 255, 255);}
 		  
 		  
-#searchbar{background-color:#1C2321;
-			padding-left: 30px;
+#searchbar{
 			color:#FFFFFF;
-			font-size:18px;}
+			font-size:18px;
+			width: 100%;
+			display: block;
+			padding-top:5px;
+			padding-bottom: 5px;}
+			
+#global{background-color:#1C2321;
+		border-bottom: 2px solid #c9c9c9;}
+#local{background-color:#1C2321;
+	   }
 
-#global_text{padding-left: 200px;}
-#local_text{padding-left: 200px;}
+#global_text{padding-left: 10px;
+			font-size: 24px;
+			margin-bottom:10px;
+			margin-top:5px;}
+#local_text{padding-left: 10px;
+			font-size: 24px;
+			padding-right: 14.7px;
+			margin-bottom:10px;
+			margin-top:5px;}
 
 #shapimage{width:1700px;}
 
 #limeimage{width:1700px;}
 
 #shapsummary{width:625px;}
+
+#dd_vals_div{display:inline-block;
+			 padding-left:5px;}
+#dd_vals_div:hover{background-color:#333333;
+				   padding-top:10px;
+				   padding-bottom:10px;
+				   padding-left:5px;}
+#Q_feature{background-color:transparent;
+		   color:#FFFFFF;
+		   border: 0px solid #FFFFFF;}
+#Q_feature:hover{color:gold;}
+
+#corr_div{display:inline-block;
+			 padding-left:5px;}
+#corr_div:hover{background-color:#333333;
+				   padding-top:10px;
+				   padding-bottom:10px;
+				   padding-left:5px;}
+#Q_corr{background-color:transparent;
+		   color:#FFFFFF;
+		   border: 0px solid #FFFFFF;}
+		   
+#Q_corr:hover{color:gold;}
+
+#button_corr{background-color:transparent;
+			 border:0px solid #FFFFFF;
+			 color:#FFFFFF}
+
+
+#lda_div{display:inline-block;
+			 padding-left:5px;}
+			 
+#lda_div:hover{background-color:#333333;
+				   padding-top:10px;
+				   padding-bottom:10px;
+				   padding-left:5px;}
+				   
+#button_LDA{background-color:transparent;
+			 border:0px solid #FFFFFF;
+			 color:#FFFFFF}
+#Q_lda{background-color:transparent;
+		   color:#FFFFFF;
+		   border: 0px solid #FFFFFF;}
+		   
+#Q_lda:hover{color:gold;}
+
+
+#sim_div{display:inline-block;
+			 padding-left:5px;}
+			 
+#sim_div:hover{background-color:#333333;
+				   padding-top:10px;
+				   padding-bottom:10px;
+				   padding-left:5px;}
+				   
+#button_sim{background-color:transparent;
+			 border:0px solid #FFFFFF;
+			 color:#FFFFFF}
+#Q_sim{background-color:transparent;
+		   color:#FFFFFF;
+		   border: 0px solid #FFFFFF;}
+		   
+#Q_sim:hover{color:gold;}
+
+
+
+#lime_div{display:inline-block;
+			 padding-left:5px;}	 
+#lime_div:hover{background-color:#333333;
+				   padding-top:10px;
+				   padding-bottom:10px;
+				   padding-left:5px;}		   
+#button_LIME{background-color:transparent;
+			 border:0px solid #FFFFFF;
+			 color:#FFFFFF}
+#Q_lime{background-color:transparent;
+		   color:#FFFFFF;
+		   border: 0px solid #FFFFFF;}
+#Q_lime:hover{color:gold;}
+
+
+
+#shap_div{display:inline-block;
+			 padding-left:5px;}	 
+#shap_div:hover{background-color:#333333;
+				   padding-top:10px;
+				   padding-bottom:10px;
+				   padding-left:5px;}		   
+#button_SHAP{background-color:transparent;
+			 border:0px solid #FFFFFF;
+			 color:#FFFFFF}
+#Q_shap{background-color:transparent;
+		   color:#FFFFFF;
+		   border: 0px solid #FFFFFF;}
+#Q_shap:hover{color:gold;}
+
+
+#grid_div{display:inline-block;
+			 padding-left:5px;}	 
+#grid_div:hover{background-color:#333333;
+				   padding-top:10px;
+				   padding-bottom:10px;
+				   padding-left:5px;}		   
+#button_counterexample_run{background-color:transparent;
+			 border:0px solid #FFFFFF;
+			 color:#FFFFFF}
+#Q_grid{background-color:transparent;
+		   color:#FFFFFF;
+		   border: 0px solid #FFFFFF;}
+#Q_grid:hover{color:gold;}

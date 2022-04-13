@@ -130,6 +130,7 @@ def rangeSearchChecklist():
             "PercentTradesWBalance"]
 
 def create_grid(current, ranges, checklist):
+
     gridbase = []
     counts = []
     for nr, (val, name, valrange) in enumerate(zip(current[0], ranges.keys(), ranges.values())):
@@ -212,19 +213,25 @@ def plot_heatmaps(counts, data, ranges):
     for combo in axes:
         tempdata = data[[combo[0], combo[1], 'num_outcome']]
         heatmapdata = tempdata.groupby(list(combo)).mean().unstack()
+        axis1 = list(zip(*heatmapdata.columns))[1]
+        axis2 = list(heatmapdata.index)
+
         fig = go.Figure(layout=dict(xaxis_title=f'{list(ranges.keys())[combo[1]]}',
                                     yaxis_title=f'{list(ranges.keys())[combo[0]]}',
+
 
                                     title='fraction of Good values'),
                         data=go.Heatmap(
                             z=heatmapdata.values,
-                            x=list(zip(*heatmapdata.columns))[1],
-                            y=list(heatmapdata.index),
+                            x=axis1,
+                            y=axis2,
                             zmax=1,
                             zmin=0,
                             hoverongaps=False))
+        fig.update_layout(width=900,height=900)
         heatmaps.append(dcc.Graph(figure=fig))
     return heatmaps
+
 
 def prep_lda(features):
     X = features.drop('RiskPerformance', axis=1)
@@ -355,18 +362,25 @@ if __name__ == '__main__':
 
         html.Div(id='searchbar', children=[
             html.Div(id='global', children=[
-                html.P(id='global_text', children='global explainers'),
-                html.Button('Show Interactive LDA', id='button_LDA', n_clicks=0, style={'margin-right': '3px'}),
-                html.Button('?', id='Q_lda', n_clicks=0,
-                            style={'margin-right': '3px', 'border-radius': '50%', "font-weight": "bold"}),
+                html.P(id='global_text', children='global explainers',style={'display':'inline-block','margin-right':'10px'}),
+                html.Div(id='dd_vals_div',children=[
+                dcc.Dropdown(rangeSearchChecklist(), placeholder="See feature distribution",
+                             id='dd_vals', style={'margin-right': '3px', 'display': 'inline-block', 'width': '350px',
+                                                  'height': '30px', 'margin-bottom': '-10px', 'color': '#000000'}),
+                html.Button('?', id='Q_feature', n_clicks=0,
+                            style={'margin-right': '3px', "font-weight": "bold"}),
+                ]),
+                html.Div(id='corr_div',children=[
                 html.Button('Correlation Matrix', id='button_corr', n_clicks=0, style={'margin-right': '3px'}),
                 html.Button('?', id='Q_corr', n_clicks=0,
                             style={'margin-right': '3px', 'border-radius': '50%', "font-weight": "bold"}),
-                dcc.Dropdown(rangeSearchChecklist(), placeholder="See feature distribution",
-                             id='dd_vals',style={'margin-right':'3px','display':'inline-block', 'width':'350px',
-                                                 'height':'30px','margin-bottom':'-10px','color':'#000000'}),
-            html.Button('?', id='Q_feature', n_clicks=0,
+                ]),
+                html.Div(id='lda_div', children=[
+                html.Button('Show Interactive LDA', id='button_LDA', n_clicks=0, style={'margin-right': '3px'}),
+                html.Button('?', id='Q_lda', n_clicks=0,
                             style={'margin-right': '3px', 'border-radius': '50%', "font-weight": "bold"}),
+                ]),
+
                 dbc.Modal(
                     [
                         dbc.ModalHeader(dbc.ModalTitle("Linear Discriminant Analysis")),
@@ -407,21 +421,31 @@ if __name__ == '__main__':
                 )
             ]),
             html.Div(id='local', children=[
-                html.P(id='local_text', children='local explainers'),
+                html.P(id='local_text', children='local explainers',style={'display':'inline-block','margin-right':'10px'}),
+
+                html.Div(id='sim_div',children=[
+                dcc.Dropdown(['Normalized', 'Standard'], placeholder='Most Similar', id='button_sim',
+                             style={'margin-right': '3px', 'display': 'inline-block', 'width': '350px',
+                                    'height': '30px', 'margin-bottom': '-10px', 'color': '#000000'}),
+                html.Button('?', id='Q_sim', n_clicks=0,
+                            style={'margin-right': '3px', 'border-radius': '50%', "font-weight": "bold"}),
+                ]),
+                html.Div(id='lime_div',children=[
+                html.Button('Perform LIME', id='button_LIME', n_clicks=0, style={'margin-right': '3px'}),
+                html.Button('?', id='Q_lime', n_clicks=0,
+                            style={'margin-right': '3px', 'border-radius': '50%', "font-weight": "bold"}),
+                ]),
+                html.Div(id='shap_div',children=[
+                html.Button('Perform SHAP', id='button_SHAP', n_clicks=0, style={'margin-right': '3px'}),
+                html.Button('?', id='Q_shap', n_clicks=0,
+                            style={'margin-right': '3px', 'border-radius': '50%', "font-weight": "bold"}),
+                ]),
+                html.Div(id='grid_div',children=[
                 html.Button('Run Grid Search', id='button_counterexample_run', n_clicks=0,
                             style={'margin-right': '3px'}),
                 html.Button('?', id='Q_grid', n_clicks=0,
                             style={'margin-right': '3px', 'border-radius': '50%', "font-weight": "bold"}),
-                html.Button('Perform LIME', id='button_LIME', n_clicks=0, style={'margin-right': '3px'}),
-                html.Button('?', id='Q_lime', n_clicks=0,
-                            style={'margin-right': '3px', 'border-radius': '50%', "font-weight": "bold"}),
-                html.Button('Perform SHAP', id='button_SHAP', n_clicks=0, style={'margin-right': '3px'}),
-                html.Button('?', id='Q_shap', n_clicks=0,
-                            style={'margin-right': '3px', 'border-radius': '50%', "font-weight": "bold"}),
-                dcc.Dropdown(['Normalized', 'Standard'], placeholder = 'Most Similar', id='button_sim', style={'margin-right':'3px','display':'inline-block', 'width':'350px',
-                                                 'height':'30px','margin-bottom':'-10px','color':'#000000'}),
-                html.Button('?', id='Q_sim', n_clicks=0,
-                            style={'margin-right': '3px', 'border-radius': '50%', "font-weight": "bold"}),
+                ]),
                 dbc.Modal(
                     [
                         dbc.ModalHeader(dbc.ModalTitle("Grid Search")),
@@ -471,7 +495,7 @@ if __name__ == '__main__':
                 ),
             ])
 
-        ], style={'width': '100%', 'display': 'block', 'padding-top': '5px', 'padding-bottom': '10px'}),
+        ]),
 
         # store information of current client
         dcc.Store(id='store_person'),
@@ -581,7 +605,7 @@ if __name__ == '__main__':
         if button == 1:
             return [0, tally],\
                    {'display': 'inline-block'},\
-                   {'background-color': 'yellow', 'margin-right': '3px'},\
+                   {'color': 'gold', 'margin-right': '3px'},\
                    'select columns', \
                    1,\
                    dash.no_update, \
@@ -597,7 +621,7 @@ if __name__ == '__main__':
 
             if len(checklist) > 5 or len(checklist) < 2:
                 return [0, tally], {'display':'none'}, \
-                       {'background-color': '#e9e9ed', 'margin-right': '3px'}, 'Run Grid Search', dash.no_update, [], []
+                       {'color': '#FFFFFF', 'margin-right': '3px'}, 'Run Grid Search', dash.no_update, [], []
 
             #Get all percentage ranges
             percentages = []
@@ -627,7 +651,7 @@ if __name__ == '__main__':
 
             heatmaps = plot_heatmaps(counts, newdata, ranges)
             return [html.Div(heatmaps), tally+1], {'display': 'none'}, \
-                   {'background-color': '#e9e9ed', 'margin-right': '3px'}, 'Run Grid Search', 0, [], []
+                   {'color': '#FFFFFF', 'margin-right': '3px'}, 'Run Grid Search', 0, [], []
 
     @app.callback(
         Output('LDA_plt','data'),
@@ -652,24 +676,23 @@ if __name__ == '__main__':
             str(i): f"LD {i + 1} ({var:.1f}%)"
             for i, var in enumerate(lda_model.explained_variance_ratio_ * 100)
         }
-
-        fig = px.scatter_matrix(
+        fig_lda = px.scatter_matrix(
             n_df,
             labels=labels,
             size='size',
             size_max=5,
             dimensions=lda_dims,
-            color='labels'
+            color='labels',
         )
-        fig.update_traces(diagonal_visible=False)
-        fig.update_traces(marker=dict(line=dict(width=0)))
+        fig_lda.update_traces(diagonal_visible=False)
+        fig_lda.update_traces(marker=dict(line=dict(width=0)))
 
         if checklist:
-            fig.for_each_trace(
+            fig_lda.for_each_trace(
                 lambda trace: trace.update(visible='legendonly') if trace.name in checklist else ()
             )
 
-        return [html.Div(dcc.Graph(figure=fig)), tally+1], 0
+        return [html.Div(dcc.Graph(figure=fig_lda,style={'width':'1600px','height':'800px'})), tally+1], 0
 
     @app.callback(
         Output('Corr_plt', 'data'),
