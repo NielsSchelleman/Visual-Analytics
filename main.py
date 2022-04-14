@@ -11,7 +11,8 @@ import plotly.express as px
 from statsmodels.stats.proportion import proportion_confint
 import Lime_shap
 import base64
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import Normalizer
+from sklearn.calibration import CalibratedClassifierCV
 
 def get_model():
     """"This function returns the random forest model that was given in the assignment"""
@@ -184,31 +185,42 @@ def plot_Shap_Summary():
 def plot_most_similar(current,  same_group=False, normalize=True):
     columns = list(features.columns)
     current = np.array(current[0]).reshape(1,-1)
+    scaler = Normalizer()
+    dropped = features.drop('RiskPerformance', axis=1)
+    scaler.fit(dropped)
     #Select counter group
     if same_group:
         opposing_group = features[features['RiskPerformance'] == prediction[0]].reset_index(drop=True).drop('RiskPerformance', axis=1)
     else:
         opposing_group = features[features['RiskPerformance'] != 'Bad'].reset_index(drop=True).drop('RiskPerformance', axis=1)
-    scaler = StandardScaler()
-    opposing_group = pd.DataFrame(scaler.fit_transform(opposing_group))
-    current = scaler.transform(current)
-    dist = np.linalg.norm(opposing_group - current, axis=1)
+
+    scaled_opposing_group = scaler.transform(opposing_group)
+    scaled_opposing_group = pd.DataFrame(scaled_opposing_group)
+    scaled_current = scaler.transform(current)
+    dist = np.linalg.norm(scaled_opposing_group - scaled_current, axis=1)
     idx_min = np.argmin(dist)
-    most_similar = np.array(opposing_group.loc[idx_min]).reshape(1, -1)
+
 
     if not normalize:
-        #Show normalized values
-        current = scaler.inverse_transform(current)
-        most_similar = scaler.inverse_transform(most_similar)
+        #Show original values
+        current = current
+        most_similar = np.array(opposing_group.loc[idx_min]).reshape(1, -1)
+        title = "Comparison to most similar person in group with loan accepted"
+        mini = min(current[0]) - 1
+        maxi = max(current[0]) + 1
+    else:
+        most_similar = np.array(scaled_opposing_group.loc[idx_min]).reshape(1, -1)
+        current = scaled_current
+        title = "Normalized comparison to most similar person in group with loan accepted"
+        mini = -1 if (np.amin(current) < 0) else 0
+        maxi = 1
 
-    #else show original values
-    fig = go.Figure(layout=dict(xaxis_title='Features', yaxis_title='Values', title='Comparison to most similar person in '
-                                                                                    'group with loan accepted'),
+    #else show normalized values
+    fig = go.Figure(layout=dict(xaxis_title='Features', yaxis_title='Values', title=title),
     data=[go.Bar(name = 'Me', x=opposing_group.columns, y=current[0]),
                         go.Bar(name='Other', x=opposing_group.columns, y=most_similar[0])])
     fig.update_layout(barmode='group')
-    mini = min(current[0])-1
-    maxi = max(current[0])+1
+
     if mini<0 and maxi<0:
         fig.update_yaxes(range=[mini, 0])
     elif mini<0 and maxi>0:
@@ -268,7 +280,6 @@ def CI(values, prediction, model):
     map = {'Good': 1, 'Bad': 0}
     estimators = model.estimators_
     prediction = map[prediction[0]]
-
     same_classfied = []
 
     for estimator in estimators:
@@ -282,6 +293,7 @@ def CI(values, prediction, model):
     count = sum(same_classfied)
     ci = proportion_confint(count, len(same_classfied))
     ci = (round(ci[0], 3), round(ci[1], 3))
+
     return ci
 
 def plot_correlations():
@@ -379,9 +391,24 @@ if __name__ == '__main__':
         # the global shap plot
         html.Img(id='shapsum', src='data:image/png;base64,{}'.format(plot_Shap_Summary()),
                  style={'width':'625px','margin-left':'100px', 'margin-top':'-490px'}),
-
+        html.Button('?', id='Q_shap_sum', n_clicks=0,
+                    style={'margin-right': '3px', 'border-radius': '50%', "font-weight": "bold"}),
         # the text that shows the current evaluation and confidence interval
         html.Div(id='current_eval'),
+        html.Button('?', id='Q_eval', n_clicks=0,
+                    style={'margin-right': '3px', 'border-radius': '50%', "font-weight": "bold"}),
+        dbc.Modal(
+            [
+                dbc.ModalHeader(dbc.ModalTitle("Model confidence")),
+                dbc.ModalBody("""This line shows the model output for the given customer values. Aligned with this output the model returns
+                probabilities belonging to the chance that this customer belongs to that class. Higher probability means that the model
+                is more certain that this customer belongs to that group.
+             """),
+            ],
+            id="A_eval",
+            size="lg",
+            is_open=False
+        ),
         html.Div(id='in-between-counterexample', style={'display': 'none'}),
 
         # the big navbar with the buttons on it
@@ -447,6 +474,20 @@ if __name__ == '__main__':
                          subgroup in the feature."""),
                     ],
                     id="A_feature",
+                    size="lg",
+                    is_open=False
+                ),
+                dbc.Modal(
+                    [
+                        dbc.ModalHeader(dbc.ModalTitle("Shap summary")),
+                        dbc.ModalBody("""In this plot you can see the impact on the model output of each variable.
+                    A variable that has points far away from the middle has more impact on the output of the model.
+                    Lower values are plotted as blue, whereas higher values are plotted as red.
+                    This should help you get an understanding of which variables have a big impact when they change.
+                    
+            """),
+                    ],
+                    id="A_shap_sum",
                     size="lg",
                     is_open=False
                 )
@@ -568,8 +609,14 @@ if __name__ == '__main__':
     )
     def GetPersonEval(current):
         prediction = model.predict(current)
-        ci = CI(current, prediction, model)
-        return f'Output: {prediction} with 95% confidence interval: {ci}'
+        calibrated_model = CalibratedClassifierCV(base_estimator=model, cv='prefit')
+        y = features[labelDimension]
+        X = features.drop(labelDimension, axis=1)
+
+        calibrated_model.fit(X, y)
+
+        calibrated_prop = calibrated_model.predict_proba(current)
+        return f'Output: {prediction} with class probabilities: Bad: {round(calibrated_prop[0][0], 3)}, Good: {round(calibrated_prop[0][1], 3)}'
 
 
     # callback that generates the input boxes for when you need to fill in the ranges after pressing the grid search.
@@ -898,6 +945,26 @@ if __name__ == '__main__':
         Output("A_sim", "is_open"),
         Input("Q_sim", "n_clicks"),
         State("A_sim", "is_open"),
+    )
+    def toggle_modal(n1, is_open):
+        if n1:
+            return not is_open
+        return is_open
+
+    @app.callback(
+        Output("A_shap_sum", "is_open"),
+        Input("Q_shap_sum", "n_clicks"),
+        State("A_shap_sum", "is_open"),
+    )
+    def toggle_modal(n1, is_open):
+        if n1:
+            return not is_open
+        return is_open
+
+    @app.callback(
+        Output("A_eval", "is_open"),
+        Input("Q_eval", "n_clicks"),
+        State("A_eval", "is_open"),
     )
     def toggle_modal(n1, is_open):
         if n1:
