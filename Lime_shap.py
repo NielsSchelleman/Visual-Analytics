@@ -11,20 +11,16 @@ matplotlib.use('Agg')
 def get_lime_model(data):
     """"This function receives a set of data and builds a lime model on it.
     This lime model is returned"""
-    try: # if we already made the model, we load it instead of creating it
-        lime_explainer = pickle.load(open('lime.sav', 'rb'))
+    try:  # if the target variable is still in the data, we try to drop it.
+        features = data.drop(['RiskPerformance'], axis=1)
     except:
-        try: # if the target variable is still in the data, we try to drop it.
-            features = data.drop(['RiskPerformance'], axis=1)
-        except:
-            features = data
+        features = data
 
-        lime_explainer = lime_tabular.LimeTabularExplainer(
-            training_data=np.array(features),
-            feature_names=features.columns,
-            class_names=['Bad', 'Good'],
-            mode='classification')
-        pickle.dump(lime_explainer, open('lime.sav', 'wb') )
+    lime_explainer = lime_tabular.LimeTabularExplainer(
+        training_data=np.array(features),
+        feature_names=features.columns,
+        class_names=['Bad', 'Good'],
+        mode='classification')
     return lime_explainer
 
 def lime_explain(limemodel, model, input_values):
