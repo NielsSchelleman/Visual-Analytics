@@ -185,3 +185,19 @@ body { margin: 0;
 
 #current_eval{width:460px;
 			  display:inline-block;}
+			  
+			  
+			  
+#pdp_div{display:inline-block;
+			 padding-left:5px;}	 
+#pdp_div:hover{background-color:#333333;
+				   padding-top:10px;
+				   padding-bottom:10px;
+				   padding-left:5px;}		   
+#pdp_vals{background-color:transparent;
+			 border:0px solid #FFFFFF;
+			 color:#FFFFFF}
+#Q_pdp{background-color:transparent;
+		   color:#FFFFFF;
+		   border: 0px solid #FFFFFF;}
+#Q_pdp:hover{color:gold;}

@@ -34,17 +34,8 @@ def get_model():
         pickle.dump(model, open('rf_mod.sav', 'wb'))
     return model
 
-def getRanges(percentages, current_vals):
-    # Indices of chosen variables
-    non_zero_idx = np.nonzero(np.array(percentages))
-
-    # Keep only variables which ranges we want to change
-    variable_list = np.array(rangeSearchChecklist())[non_zero_idx]
-    current_vals = np.array(current_vals).flatten()[non_zero_idx]
-    percentages = np.array(percentages)[non_zero_idx]
-
-    # acceptable search spaces, assume you cannot go from some value to any special value eg. 26 --> -9
-    ranges = {"ExternalRiskEstimate": range(30, 100),
+def giveRanges():
+    return {"ExternalRiskEstimate": range(30, 100),
             "MSinceOldestTradeOpen": range(0,1000,10),
             "MSinceMostRecentTradeOpen": range(0, 400,4),
             "AverageMInFile": range(0, 400,4),
@@ -67,6 +58,19 @@ def getRanges(percentages, current_vals):
             "NumInstallTradesWBalance": range(1, 25),
             "NumBank/NatlTradesWHighUtilization": range(0, 25),
             "PercentTradesWBalance": range(0, 100)}
+
+
+def getRanges(percentages, current_vals):
+    # Indices of chosen variables
+    non_zero_idx = np.nonzero(np.array(percentages))
+
+    # Keep only variables which ranges we want to change
+    variable_list = np.array(rangeSearchChecklist())[non_zero_idx]
+    current_vals = np.array(current_vals).flatten()[non_zero_idx]
+    percentages = np.array(percentages)[non_zero_idx]
+
+    # acceptable search spaces, assume you cannot go from some value to any special value eg. 26 --> -9
+    ranges = giveRanges()
     # Update ranges for selected variables
     for variable, value, percentage in zip(variable_list, current_vals, percentages):
         max_range = ranges[variable][-1]
@@ -516,7 +520,19 @@ if __name__ == '__main__':
                 html.Button('?', id='Q_shap', n_clicks=0,
                             style={'margin-right': '3px', 'border-radius': '50%', "font-weight": "bold"}),
                 ]),
-                # the fourth button for generating the grid search heatmaps
+
+                # the fourth button for generating a partial dependence plot on a feature
+                html.Div(id='pdp_div', children=[
+                    dcc.Dropdown(rangeSearchChecklist(), placeholder="Show Feature impact",
+                                 id='pdp_vals',
+                                 style={'margin-right': '3px', 'display': 'inline-block', 'width': '350px',
+                                        'height': '30px', 'margin-bottom': '-10px', 'color': '#000000'}),
+                    html.Button('?', id='Q_pdp', n_clicks=0,
+                                style={'margin-right': '3px', 'border-radius': '50%', "font-weight": "bold"}),
+                ]),
+
+
+                # the fifth button for generating the grid search heatmaps
                 html.Div(id='grid_div',children=[
                 html.Button('Run Grid Search', id='button_counterexample_run', n_clicks=0,
                             style={'margin-right': '3px'}),
@@ -571,6 +587,17 @@ if __name__ == '__main__':
                     size="lg",
                     is_open=False
                 ),
+                dbc.Modal(
+                    [
+                        dbc.ModalHeader(dbc.ModalTitle("Feature Impact")),
+                        dbc.ModalBody("""For the selected feature, this shows a partial dependence plot of the feature
+                        https://christophm.github.io/interpretable-ml-book/pdp.html with respect to the confidence of
+                        the model"""),
+                    ],
+                    id="A_pdp",
+                    size="lg",
+                    is_open=False
+                ),
             ])
 
         ]),
@@ -591,6 +618,7 @@ if __name__ == '__main__':
         dcc.Store(id='sim_plt', data=[None, -10]),
         dcc.Store(id='lime_plt', data=[None, -10]),
         dcc.Store(id='shap_plt', data=[None, -10]),
+        dcc.Store(id='pd_plt', data=[None, -10]),
 
         #plot into here
         html.Div(id='misc_persist', children=[
@@ -854,6 +882,41 @@ if __name__ == '__main__':
             raise exceptions.PreventUpdate
         return [plot_Shap(person), tally+1], 0
 
+    # callback for the partial dependence plot
+    @app.callback(
+        Output('pd_plt', 'data'),
+        Output('pdp_vals', 'value'),
+        Input('store_person', 'data'),
+        Input('pdp_vals', 'value'),
+        Input('tally', 'n_clicks'),
+    )
+    def plot_pdp(person, button, tally):
+        # plot the person along with the most similar person when a value is selected
+        if not button:
+            raise exceptions.PreventUpdate
+        # either plot the scaled variant or not depending on what the user selects
+        calibrated_model = CalibratedClassifierCV(base_estimator=model, cv='prefit')
+        y = features[labelDimension]
+        X = features.drop(labelDimension, axis=1)
+        calibrated_model.fit(X, y)
+        name = [i for i,feature in enumerate(rangeSearchChecklist()) if feature == button][0]
+        ax1 = giveRanges()[button]
+        biglist = []
+        for i in ax1:
+            p2 = person[0].copy()
+            p2[name] = i
+            biglist.append(p2)
+        calibrated_prop = calibrated_model.predict_proba(biglist)
+        pdp_frame = pd.DataFrame(calibrated_prop,columns=['confidence bad','confidence good'])
+        pdp_frame = pdp_frame.melt()
+        pdp_frame[button] = list(ax1) * 2
+        pdp_frame = pdp_frame.rename(columns={'value':'confidence','variable':'legend'})
+        fig = px.line(pdp_frame, x=button, y="confidence", color='legend')
+        return [dcc.Graph(id='pdp_graph',figure= fig), tally+1],[]
+
+
+
+
     # callback for only showing the plot corresponding to the last button the user pressed
     @app.callback(
         Output('tally', 'n_clicks'),
@@ -866,14 +929,15 @@ if __name__ == '__main__':
         Input('Val_plt', 'data'),
         Input('sim_plt', 'data'),
         Input('lime_plt', 'data'),
-        Input('shap_plt','data')
+        Input('shap_plt','data'),
+        Input('pd_plt','data')
     )
-    def ShowPlot(heatmap, LIME, SHAP, LDA, corr, vals, sim, lime, shap):
+    def ShowPlot(heatmap, LIME, SHAP, LDA, corr, vals, sim, lime, shap, pdp):
 
         curr_tally = -10
         curr_plot = None
         # check for each plot stored in one of the stores if its tally value is the largest, if it is, plot that plot
-        for plot, tally in [heatmap, LIME, SHAP, LDA, corr, vals, sim, lime, shap]:
+        for plot, tally in [heatmap, LIME, SHAP, LDA, corr, vals, sim, lime, shap, pdp]:
             if tally > curr_tally:
                 curr_tally = tally
                 curr_plot = plot
@@ -967,6 +1031,17 @@ if __name__ == '__main__':
         State("A_eval", "is_open"),
     )
     def toggle_modal(n1, is_open):
+        if n1:
+            return not is_open
+        return is_open
+
+    @app.callback(
+        Output("A_pdp", "is_open"),
+        Input("Q_pdp", "n_clicks"),
+        State("A_pdp", "is_open"),
+    )
+    def toggle_modal(n1, is_open):
+        print(n1)
         if n1:
             return not is_open
         return is_open
