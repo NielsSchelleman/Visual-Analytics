@@ -169,3 +169,19 @@ body { margin: 0;
 		   color:#FFFFFF;
 		   border: 0px solid #FFFFFF;}
 #Q_grid:hover{color:gold;}
+
+
+
+#Q_shap_sum{background-color:transparent;
+			border: 0px solid #FFFFFF;
+			font-size: 36px;}
+#Q_shap_sum:hover{color:gold;}
+
+
+#Q_eval{background-color:transparent;
+			border: 0px solid #FFFFFF;
+			display:inline-block;}
+#Q_eval:hover{color:gold;}
+
+#current_eval{width:460px;
+			  display:inline-block;}
