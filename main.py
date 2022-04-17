@@ -8,7 +8,6 @@ import plotly.graph_objects as go
 import pickle
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 import plotly.express as px
-from statsmodels.stats.proportion import proportion_confint
 import Lime_shap
 import base64
 from sklearn.preprocessing import Normalizer
@@ -261,7 +260,6 @@ def plot_heatmaps(counts, data, ranges):
         heatmaps.append(dcc.Graph(figure=fig))
     return heatmaps
 
-
 def prep_lda(features):
     """Performs LDA on the features"""
     # get features
@@ -279,26 +277,6 @@ def prep_lda(features):
     comp_df['size'] = 1
     comp_df['labels'] = y2
     return comp_df, lda, dims
-
-def CI(values, prediction, model):
-    map = {'Good': 1, 'Bad': 0}
-    estimators = model.estimators_
-    prediction = map[prediction[0]]
-    same_classfied = []
-
-    for estimator in estimators:
-        new_pred = int(estimator.predict(values))
-
-        if new_pred == prediction:
-            same_classfied.append(1)
-        else:
-            same_classfied.append(0)
-
-    count = sum(same_classfied)
-    ci = proportion_confint(count, len(same_classfied))
-    ci = (round(ci[0], 3), round(ci[1], 3))
-
-    return ci
 
 def plot_correlations():
     """plots the correlations of the features including a threshold."""
